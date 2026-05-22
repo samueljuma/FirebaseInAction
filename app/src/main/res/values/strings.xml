@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">FirebaseInAction</string>
+    <string name="error_weak_password">Weak Password!</string>
+    <string name="error_invalid_credentials">Invalid Credentials!</string>
+    <string name="error_user_already_exists">User Already Exists!</string>
+    <string name="error_user_not_found">User Not Found!</string>
+    <string name="error_too_many_requests">Too many requests!</string>
+    <string name="error_network">Network Error!</string>
+    <string name="error_unknown">Oops! Something is wrong.</string>
+    <string name="error_email_not_verified">Email is not verified.</string>
 </resources>

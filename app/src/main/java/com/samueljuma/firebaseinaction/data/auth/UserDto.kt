@@ -1,3 +1,13 @@
 package com.samueljuma.firebaseinaction.data.auth
 
-data class UserDto (val email: String)
+import kotlinx.serialization.Serializable
+/*
+* For future Use
+ */
+@Serializable
+data class UserDto(
+    val uid: String,
+    val email: String?,
+    val displayName: String?,
+    val isEmailVerified: Boolean
+)
