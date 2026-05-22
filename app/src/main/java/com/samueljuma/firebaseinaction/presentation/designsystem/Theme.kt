@@ -1,6 +1,5 @@
-package com.samueljuma.firebaseinaction.ui.theme
+package com.samueljuma.firebaseinaction.presentation.designsystem
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
