@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.storage.StorageException
+import kotlinx.coroutines.CancellationException
 
 suspend fun <D> firebaseAuthSafeCall(
     block: suspend () -> D
@@ -26,6 +27,7 @@ suspend fun <D> firebaseAuthSafeCall(
 } catch (e: FirebaseNetworkException) {
     Result.Error(DataError.Auth.NETWORK_ERROR)
 } catch (e: Exception) {
+    if(e is CancellationException) throw e
     Result.Error(DataError.Auth.UNKNOWN)
 }
 
@@ -47,6 +49,7 @@ suspend fun <D> firestoreSafeCall(
 } catch (e: FirebaseNetworkException) {
     Result.Error(DataError.Firestore.NETWORK_ERROR)
 } catch (e: Exception) {
+    if(e is CancellationException) throw e
     Result.Error(DataError.Firestore.UNKNOWN)
 }
 
@@ -68,5 +71,6 @@ suspend fun <D> storageSafeCall(
 } catch (e: FirebaseNetworkException) {
     Result.Error(DataError.Storage.NETWORK_ERROR)
 } catch (e: Exception) {
+    if(e is CancellationException) throw e
     Result.Error(DataError.Storage.UNKNOWN)
 }

@@ -62,4 +62,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
     implementation(libs.kotlinx.coroutines.play.services)
+
+    implementation(libs.bundles.koin)
 }

@@ -10,6 +10,7 @@ kotlin = "2.3.21"
 composeBom = "2026.05.01"
 firebaseBom = "34.13.0"
 coroutinesPlayServices = "1.11.0"
+koin = "4.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,6 +41,11 @@ firebase-config = { group = "com.google.firebase", name = "firebase-config" }
 firebase-perf = { group = "com.google.firebase", name = "firebase-perf" }
 firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity" }
 
+#dependency injection - koin
+koin-core = { module ="io.insert-koin:koin-core", version.ref = "koin"}
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin"}
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin"}
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
@@ -51,3 +57,4 @@ firebase-perf = { id = "com.google.firebase.firebase-perf", version = "2.0.2" }
 firebase = ["firebase-analytics", "firebase-auth", "firebase-firestore", "firebase-storage",
     "firebase-messaging","firebase-crashlytics", "firebase-config", "firebase-perf", "firebase-appcheck-playintegrity"
 ]
+koin = [ "koin-core", "koin-android","koin-androidx-compose"]
