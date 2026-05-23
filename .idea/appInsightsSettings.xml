@@ -22,10 +22,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.samueljuma.firebaseinaction" />
+                  <option name="mobileSdkAppId" value="1:999288579968:android:91ae56e91033e3ce688365" />
+                  <option name="projectId" value="fir-inaction-dev-e7b23" />
+                  <option name="projectNumber" value="999288579968" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

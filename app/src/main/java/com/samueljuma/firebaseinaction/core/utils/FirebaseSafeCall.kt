@@ -1,5 +1,6 @@
 package com.samueljuma.firebaseinaction.core.utils
 
+import android.util.Log
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
@@ -9,25 +10,36 @@ import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.storage.StorageException
 import kotlinx.coroutines.CancellationException
+import timber.log.Timber
+
+private const val TAG = "FirebaseSafeCall"
 
 suspend fun <D> firebaseAuthSafeCall(
     block: suspend () -> D
 ): Result<D, DataError.Auth> = try {
     Result.Success(block())
+} catch (e: CancellationException) {
+    throw e  // Never swallow — coroutine cancellation must propagate
 } catch (e: FirebaseAuthWeakPasswordException) {
+    Timber.tag(TAG).w(e, "Weak password")
     Result.Error(DataError.Auth.WEAK_PASSWORD)
 } catch (e: FirebaseAuthInvalidCredentialsException) {
+    Timber.tag(TAG).w(e, "Invalid credentials")
     Result.Error(DataError.Auth.INVALID_CREDENTIALS)
 } catch (e: FirebaseAuthUserCollisionException) {
+    Timber.tag(TAG).w(e, "User already exists")
     Result.Error(DataError.Auth.USER_ALREADY_EXISTS)
 } catch (e: FirebaseAuthInvalidUserException) {
+    Timber.tag(TAG).w(e, "User not found")
     Result.Error(DataError.Auth.USER_NOT_FOUND)
 } catch (e: FirebaseTooManyRequestsException) {
+    Timber.tag(TAG).w(e, "Too many requests")
     Result.Error(DataError.Auth.TOO_MANY_REQUESTS)
 } catch (e: FirebaseNetworkException) {
+    Timber.tag(TAG).w(e, "Network error")
     Result.Error(DataError.Auth.NETWORK_ERROR)
 } catch (e: Exception) {
-    if(e is CancellationException) throw e
+    Timber.tag(TAG).e(e, "Unexpected auth error")
     Result.Error(DataError.Auth.UNKNOWN)
 }
 

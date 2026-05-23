@@ -39,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -64,4 +65,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.bundles.koin)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.navigation.compose )
+    implementation(libs.timber)
 }

@@ -1,0 +1,48 @@
+package com.samueljuma.firebaseinaction.core.utils
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.withContext
+
+@Composable
+fun <T> ObserveAsEventss(
+    flow: SharedFlow<T>,
+    onEvent: (T) -> Unit
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(flow, lifecycleOwner.lifecycle) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            flow.collect { event ->
+                onEvent(event)
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> ObserveAsEvents(
+    flow: Flow<T>,
+    key1: Any? = null,
+    key2: Any? = null,
+    onEvent: suspend (T) -> Unit
+){
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(
+        key1 = key1,
+        key2 = key2,
+        key3 = lifecycleOwner
+    ) {
+        lifecycleOwner.repeatOnLifecycle( Lifecycle.State.STARTED){
+            withContext( Dispatchers.Main.immediate){
+                flow.collectLatest(onEvent)
+            }
+        }
+    }
+}

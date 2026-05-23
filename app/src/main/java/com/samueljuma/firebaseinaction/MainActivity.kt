@@ -14,43 +14,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.google.firebase.Firebase
 import com.google.firebase.initialize
-import com.samueljuma.firebaseinaction.presentation.designsystem.FirebaseInActionTheme
+import com.samueljuma.firebaseinaction.core.navigation.AppNavHost
+import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            Firebase.initialize(this)
-            Log.d("FirebaseTest", "Firebase initialized successfully")
-        }catch(e: Exception){
-            Log.d("FirebaseTest", "Firebase initialization failed ${e.message}")
-        }
         enableEdgeToEdge()
         setContent {
-            FirebaseInActionTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            AppTheme {
+                AppNavHost()
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FirebaseInActionTheme {
-        Greeting("Android")
     }
 }
