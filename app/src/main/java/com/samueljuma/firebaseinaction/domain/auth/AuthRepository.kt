@@ -9,4 +9,5 @@ interface AuthRepository {
     suspend fun signUp(email: String, password: String): Result<User, DataError.Auth>
     suspend fun signIn(email: String, password: String): Result<User, DataError.Auth>
     suspend fun signOut(): Result<Unit, DataError.Auth>
+    suspend fun signInWithGoogle(idToken: String): Result<User, DataError.Auth>
 }

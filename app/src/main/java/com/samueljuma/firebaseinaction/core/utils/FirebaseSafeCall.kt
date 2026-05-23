@@ -1,6 +1,9 @@
 package com.samueljuma.firebaseinaction.core.utils
 
 import android.util.Log
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
@@ -41,6 +44,28 @@ suspend fun <D> firebaseAuthSafeCall(
 } catch (e: Exception) {
     Timber.tag(TAG).e(e, "Unexpected auth error")
     Result.Error(DataError.Auth.UNKNOWN)
+}
+
+suspend fun googleSignInSafeCall(
+    block: suspend () -> String
+): Result<String, DataError.Auth> {
+    return try {
+        Result.Success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: GetCredentialCancellationException) {
+        Timber.tag("GoogleAuth").d("User cancelled Google Sign-In")
+        Result.Error(DataError.Auth.CANCELLED)
+    } catch (e: GetCredentialException) {
+        Timber.tag("GoogleAuth").e(e, "Credential manager error")
+        Result.Error(DataError.Auth.GOOGLE_SIGN_IN_FAILED)
+    } catch (e: GoogleIdTokenParsingException) {
+        Timber.tag("GoogleAuth").e(e, "Failed to parse Google ID token")
+        Result.Error(DataError.Auth.GOOGLE_SIGN_IN_FAILED)
+    } catch (e: Exception) {
+        Timber.tag("GoogleAuth").e(e, "Unexpected Google Sign-In error")
+        Result.Error(DataError.Auth.UNKNOWN)
+    }
 }
 
 

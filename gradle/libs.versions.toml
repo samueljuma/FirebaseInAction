@@ -13,6 +13,8 @@ coroutinesPlayServices = "1.11.0"
 koin = "4.2.1"
 navigationCompose = "2.9.8"
 timber = "5.0.1"
+credentialManager = "1.6.0"
+googleId = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +54,11 @@ koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", versi
 # Navigation
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# SignIn with Google
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentialManager" }
+androidx-credentials-play-services = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
+google-identity = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

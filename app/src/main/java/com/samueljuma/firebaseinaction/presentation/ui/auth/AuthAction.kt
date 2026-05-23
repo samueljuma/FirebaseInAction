@@ -8,4 +8,5 @@ sealed interface AuthAction {
     data object OnSignUpClicked : AuthAction
     data object OnGoToSignUp : AuthAction
     data object OnGoToLogin : AuthAction
+    data object OnGoogleSignInClicked : AuthAction
 }

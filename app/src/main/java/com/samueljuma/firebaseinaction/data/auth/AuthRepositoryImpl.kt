@@ -1,6 +1,7 @@
 package com.samueljuma.firebaseinaction.data.auth
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.core.utils.firebaseAuthSafeCall
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
@@ -44,5 +45,13 @@ class AuthRepositoryImpl(
 
     override suspend fun signOut(): Result<Unit, DataError.Auth> = firebaseAuthSafeCall {
         firebaseAuth.signOut()
+    }
+
+    override suspend fun signInWithGoogle(
+        idToken: String
+    ): Result<User, DataError.Auth> = firebaseAuthSafeCall {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        val result = firebaseAuth.signInWithCredential(credential).await()
+        result.user?.toUser() ?: error("User is null after Google sign in")
     }
 }

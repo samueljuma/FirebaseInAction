@@ -5,13 +5,13 @@ import com.samueljuma.firebaseinaction.core.utils.UiText
 sealed interface AuthEvent {
     // Login screen events
     sealed interface Login : AuthEvent {
-        data object NavigateToHome : Login
+        data object LoginSuccess : Login
         data class ShowSnackbar(val message: UiText) : Login
     }
 
     // SignUp screen events
     sealed interface SignUp : AuthEvent {
-        data object NavigateToHome : SignUp
+        data object SignUpSuccess : SignUp
         data class ShowSnackbar(val message: UiText) : SignUp
     }
 }

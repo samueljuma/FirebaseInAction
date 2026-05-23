@@ -11,8 +11,12 @@ sealed interface DataError : AppError {
         USER_NOT_FOUND,               // account deleted/doesn't exist
         EMAIL_NOT_VERIFIED,           // trying to access before verifying
         TOO_MANY_REQUESTS,            // brute force lockout
+        INVALID_EMAIL,
+        INVALID_PASSWORD,
+        CANCELLED,
+        GOOGLE_SIGN_IN_FAILED,
         NETWORK_ERROR,                // no internet during auth
-        UNKNOWN                       // safety net
+        UNKNOWN,                       // safety net
     }
 
     enum class Firestore : DataError {
