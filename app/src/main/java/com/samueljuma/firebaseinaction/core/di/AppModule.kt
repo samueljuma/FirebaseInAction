@@ -10,6 +10,7 @@ import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ClearSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserSyncUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.ReloadCurrentUserUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignInUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GoogleSignInUseCase
@@ -44,6 +45,7 @@ val appModule = module {
     factoryOf(::GetCurrentUserSyncUseCase)
     factoryOf(::GetSessionUseCase)
     factoryOf(::ClearSessionUseCase)
+    factoryOf(::ReloadCurrentUserUseCase)
     viewModelOf(::AuthViewModel)
     viewModelOf(::HomeViewModel)
     viewModelOf(::MainViewModel)

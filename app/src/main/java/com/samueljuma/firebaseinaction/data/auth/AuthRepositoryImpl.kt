@@ -28,6 +28,10 @@ class AuthRepositoryImpl(
 
     override fun getCurrentUserSync(): User? = firebaseAuth.currentUser?.toUser()
 
+    override suspend fun reloadCurrentUser(): Result<Unit, DataError.Auth> = firebaseAuthSafeCall {
+        firebaseAuth.currentUser?.reload()?.await() ?: Unit
+    }
+
     override suspend fun signUp(
         email: String,
         password: String

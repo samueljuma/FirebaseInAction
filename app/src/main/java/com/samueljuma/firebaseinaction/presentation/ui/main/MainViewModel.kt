@@ -5,19 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
-import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ClearSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserSyncUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserUseCase
+import com.samueljuma.firebaseinaction.core.utils.DataError
+import com.samueljuma.firebaseinaction.core.utils.Result
+import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.ReloadCurrentUserUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignOutUseCase
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -26,6 +22,7 @@ class MainViewModel(
     private val clearSessionUseCase: ClearSessionUseCase,
     private val getCurrentUserSyncUseCase: GetCurrentUserSyncUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val reloadCurrentUserUseCase: ReloadCurrentUserUseCase,
     private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
@@ -38,6 +35,7 @@ class MainViewModel(
 
     private fun checkAuthState() {
         viewModelScope.launch {
+            // Phase 1: Local check — instant, no network
             val localSession = getSessionUseCase()
             val currentUser = getCurrentUserSyncUseCase()
 
@@ -52,7 +50,39 @@ class MainViewModel(
                     state.copy(isCheckingAuth = false, isLoggedIn = false)
             }
 
+            // Phase 2: Start observers — non-blocking
             observeTokenExpiry()
+
+            // Phase 3: Background server verification — only if locally logged in
+            // Does not block splash screen or initial navigation
+            if (state.isLoggedIn) {
+                verifySessionWithServer()
+            }
+        }
+    }
+
+    private fun verifySessionWithServer() {
+        // Intentionally a separate coroutine — fire and forget
+        // Does not suspend checkAuthState
+        viewModelScope.launch {
+            reloadCurrentUserUseCase()
+                .onError { error ->
+                    when (error) {
+                        DataError.Auth.USER_NOT_FOUND -> {
+                            Timber.tag(TAG).w("Account deleted — forcing sign out")
+                            clearSessionUseCase()
+                            state = state.copy(
+                                isLoggedIn = false,
+                                sessionExpired = true
+                            )
+                        }
+                        DataError.Auth.NETWORK_ERROR -> {
+                            // Offline — trust local session silently
+                            Timber.tag(TAG).d("Offline — skipping server verification")
+                        }
+                        else -> Unit
+                    }
+                }
         }
     }
 
