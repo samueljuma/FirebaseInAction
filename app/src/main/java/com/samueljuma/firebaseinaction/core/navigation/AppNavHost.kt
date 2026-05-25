@@ -1,6 +1,7 @@
 package com.samueljuma.firebaseinaction.core.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +24,15 @@ fun AppNavHost(
         AppScreens.HomeScreen.route
     } else {
         AppScreens.LoginScreen.route
+    }
+
+    // AppNavHost observes isLoggedIn state reactively
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn) {
+            navController.navigate(AppScreens.LoginScreen.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
     }
 
     NavHost(

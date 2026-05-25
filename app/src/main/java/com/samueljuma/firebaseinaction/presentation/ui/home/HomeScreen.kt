@@ -42,7 +42,7 @@ private fun HomeScreenScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("Home Screen")
+                Text("Logged in as ${state.loggedInUser?.email}")
             }
         }
     )

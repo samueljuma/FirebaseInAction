@@ -26,6 +26,8 @@ class AuthRepositoryImpl(
         awaitClose { firebaseAuth.removeAuthStateListener(listener) }
     }
 
+    override fun getCurrentUserSync(): User? = firebaseAuth.currentUser?.toUser()
+
     override suspend fun signUp(
         email: String,
         password: String
