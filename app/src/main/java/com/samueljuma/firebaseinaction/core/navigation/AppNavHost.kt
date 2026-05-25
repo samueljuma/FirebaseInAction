@@ -13,20 +13,28 @@ import org.koin.androidx.compose.koinViewModel
 import timber.log.Timber
 
 @Composable
-fun AppNavHost(){
+fun AppNavHost(
+    isLoggedIn: Boolean = false
+){
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = koinViewModel()
 
+    val startDestination = if (isLoggedIn) {
+        AppScreens.HomeScreen.route
+    } else {
+        AppScreens.LoginScreen.route
+    }
+
     NavHost(
-        startDestination = AppScreens.LoginScreen.route,
+        startDestination = startDestination,
         navController = navController
     ) { 
         composable(route = AppScreens.LoginScreen.route) {
             LoginScreenRot(
                 viewModel = authViewModel,
                 onNavigateToHome = {
-                    navController.navigate(AppScreens.HomeScreen.route){
-                        popUpTo(AppScreens.LoginScreen.route){ inclusive = true }
+                    navController.navigate(AppScreens.HomeScreen.route) {
+                        popUpTo(0) { inclusive = true }
                     }
                 },
                 onNavigateToSignUp = {
@@ -40,9 +48,8 @@ fun AppNavHost(){
             SignUpScreenRoot(
                 viewModel = authViewModel,
                 onNavigateToHome = {
-                    Timber.tag("JAYYY").i("We are here")
-                    navController.navigate(AppScreens.HomeScreen.route){
-                        popUpTo(AppScreens.SignUpScreen.route){ inclusive = true }
+                    navController.navigate(AppScreens.HomeScreen.route) {
+                        popUpTo(0) { inclusive = true }
                     }
                 },
                 onNavigateToLogin = {
@@ -56,8 +63,8 @@ fun AppNavHost(){
         composable(route = AppScreens.HomeScreen.route) {
             HomeScreenRoot(
                 onLogout = {
-                    navController.navigate(AppScreens.LoginScreen.route){
-                        popUpTo(AppScreens.HomeScreen.route){ inclusive = true }
+                    navController.navigate(AppScreens.LoginScreen.route) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

@@ -6,9 +6,9 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
 import com.samueljuma.firebaseinaction.data.auth.GoogleAuthHandler
-import com.samueljuma.firebaseinaction.domain.auth.SignInUseCase
-import com.samueljuma.firebaseinaction.domain.auth.GoogleSignInUseCase
-import com.samueljuma.firebaseinaction.domain.auth.SignUpUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.SignInUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.GoogleSignInUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.SignUpUseCase
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.launch
 

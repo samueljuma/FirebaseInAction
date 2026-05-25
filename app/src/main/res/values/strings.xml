@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FirebaseInAction</string>
+    <string name="app_name">Notey</string>
     <string name="error_weak_password">Weak Password!</string>
     <string name="error_invalid_credentials">Invalid Credentials!</string>
     <string name="error_user_already_exists">User Already Exists!</string>

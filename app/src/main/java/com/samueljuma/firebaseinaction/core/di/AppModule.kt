@@ -3,15 +3,18 @@ package com.samueljuma.firebaseinaction.core.di
 import com.google.firebase.auth.FirebaseAuth
 import com.samueljuma.firebaseinaction.BuildConfig
 import com.samueljuma.firebaseinaction.data.auth.AuthRepositoryImpl
+import com.samueljuma.firebaseinaction.data.auth.DataStoreSessionStorage
 import com.samueljuma.firebaseinaction.data.auth.GoogleAuthHandler
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
-import com.samueljuma.firebaseinaction.domain.auth.GetCurrentUserUseCase
-import com.samueljuma.firebaseinaction.domain.auth.SignInUseCase
-import com.samueljuma.firebaseinaction.domain.auth.GoogleSignInUseCase
-import com.samueljuma.firebaseinaction.domain.auth.SignOutUseCase
-import com.samueljuma.firebaseinaction.domain.auth.SignUpUseCase
+import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.SignInUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.GoogleSignInUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.SignOutUseCase
+import com.samueljuma.firebaseinaction.domain.auth.usecases.SignUpUseCase
 import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeViewModel
+import com.samueljuma.firebaseinaction.presentation.ui.main.MainViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
@@ -21,6 +24,7 @@ import org.koin.dsl.module
 
 val appModule = module {
     single { FirebaseAuth.getInstance() }
+    singleOf(::DataStoreSessionStorage).bind<SessionStorage>()
     single {
         GoogleAuthHandler(
             context = androidContext(),
@@ -36,4 +40,5 @@ val appModule = module {
     factoryOf(::GetCurrentUserUseCase)
     viewModelOf(::AuthViewModel)
     viewModelOf(::HomeViewModel)
+    viewModelOf(::MainViewModel)
 }

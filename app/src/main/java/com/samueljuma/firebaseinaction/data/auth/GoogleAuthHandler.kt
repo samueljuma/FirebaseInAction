@@ -3,16 +3,12 @@ package com.samueljuma.firebaseinaction.data.auth
 import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.googleSignInSafeCall
 import timber.log.Timber
-import kotlin.coroutines.cancellation.CancellationException
 
 class GoogleAuthHandler(
     private val context: Context,

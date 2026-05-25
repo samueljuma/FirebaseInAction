@@ -3,6 +3,7 @@ package com.samueljuma.firebaseinaction.domain.auth
 import com.samueljuma.firebaseinaction.core.utils.DataError
 import kotlinx.coroutines.flow.Flow
 import com.samueljuma.firebaseinaction.core.utils.Result
+import com.samueljuma.firebaseinaction.domain.auth.models.User
 
 interface AuthRepository {
     val currentUser: Flow<User?>
