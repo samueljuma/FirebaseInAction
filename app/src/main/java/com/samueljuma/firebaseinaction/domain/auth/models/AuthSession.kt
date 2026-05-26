@@ -1,6 +1,6 @@
-package com.samueljuma.firebaseinaction.domain.auth
+package com.samueljuma.firebaseinaction.domain.auth.models
 
-data class User(
+data class AuthSession(
     val uid: String,
     val email: String?,
     val displayName: String?,

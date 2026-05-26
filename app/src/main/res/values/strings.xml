@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FirebaseInAction</string>
+    <string name="app_name">Notey</string>
     <string name="error_weak_password">Weak Password!</string>
     <string name="error_invalid_credentials">Invalid Credentials!</string>
     <string name="error_user_already_exists">User Already Exists!</string>
@@ -8,4 +8,7 @@
     <string name="error_network">Network Error!</string>
     <string name="error_unknown">Oops! Something is wrong.</string>
     <string name="error_email_not_verified">Email is not verified.</string>
+    <string name="error_invalid_email">Please enter your email</string>
+    <string name="error_invalid_password">Please enter your password</string>
+    <string name="error_google_sign_in_failed">Google Sign-In failed. Please try again.</string>
 </resources>

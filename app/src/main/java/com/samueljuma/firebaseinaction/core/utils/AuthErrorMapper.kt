@@ -19,4 +19,11 @@ fun DataError.Auth.toUiText(): UiText = when (this) {
         UiText.StringResource(R.string.error_unknown)
     DataError.Auth.EMAIL_NOT_VERIFIED ->
         UiText.StringResource(R.string.error_email_not_verified)
+    DataError.Auth.INVALID_EMAIL ->
+        UiText.StringResource(R.string.error_invalid_email)
+    DataError.Auth.INVALID_PASSWORD ->
+        UiText.StringResource(R.string.error_invalid_password)
+    DataError.Auth.CANCELLED -> UiText.DynamicString("") // silent — user chose to cancel
+    DataError.Auth.GOOGLE_SIGN_IN_FAILED ->
+        UiText.StringResource(R.string.error_google_sign_in_failed)
 }

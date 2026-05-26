@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -22,6 +24,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val props = gradleLocalProperties(rootDir, providers)
+        val webClientId = props.getProperty("WEB_CLIENT_ID") ?: ""
+        buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
     }
 
     buildTypes {
@@ -39,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -62,4 +69,20 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
     implementation(libs.kotlinx.coroutines.play.services)
+
+    implementation(libs.bundles.koin)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.navigation.compose )
+    implementation(libs.timber)
+
+    // For Sign In With Google
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.google.identity)
+
+    implementation(libs.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.splash.screen)
+
+    implementation(libs.bundles.lifecycle)
 }
