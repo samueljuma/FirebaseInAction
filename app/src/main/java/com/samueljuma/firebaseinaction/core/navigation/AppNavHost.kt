@@ -72,10 +72,18 @@ fun AppNavHost(
 
         composable(route = AppScreens.HomeScreen.route) {
             HomeScreenRoot(
-                onLogout = {
+                onNavigateToLogin = {
                     navController.navigate(AppScreens.LoginScreen.route) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onNavigateToCreateNote = {
+                    navController.navigate(AppScreens.CreateNoteScreen.route)
+                },
+                onNavigateToNoteDetail = { noteId ->
+                    navController.navigate(
+                        AppScreens.NoteDetailScreen.route.replace("{noteId}", noteId)
+                    )
                 }
             )
         }

@@ -11,4 +11,11 @@
     <string name="error_invalid_email">Please enter your email</string>
     <string name="error_invalid_password">Please enter your password</string>
     <string name="error_google_sign_in_failed">Google Sign-In failed. Please try again.</string>
+    <string name="error_permission_denied">You don\'t have permission to do that</string>
+    <string name="error_not_found">The requested item was not found</string>
+    <string name="error_already_exists">This item already exists</string>
+    <string name="error_resource_exhausted">Service limit reached. Try again later</string>
+    <string name="error_disk_full">Device storage is full</string>
+    <string name="error_object_not_found">File not found</string>
+    <string name="error_file_too_large">File is too large to upload</string>
 </resources>
