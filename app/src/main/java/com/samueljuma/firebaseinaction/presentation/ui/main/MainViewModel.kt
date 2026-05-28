@@ -9,7 +9,6 @@ import com.samueljuma.firebaseinaction.domain.auth.usecases.ClearSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserSyncUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserUseCase
 import com.samueljuma.firebaseinaction.core.utils.DataError
-import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ReloadCurrentUserUseCase

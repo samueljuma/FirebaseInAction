@@ -18,6 +18,9 @@ googleId = "1.2.0"
 datastore = "1.2.1"
 kotlinxSerialization = "1.11.0"
 splashScreen = "1.2.0"
+room = "2.8.4"
+ksp = "2.3.7"
+workManager = "2.10.1"
 
 
 [libraries]
@@ -75,6 +78,13 @@ androidx-splash-screen = { group = "androidx.core", name = "core-splashscreen", 
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 compose-lifecycle = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle"}
 
+#Room
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+
+#Work Manager
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 
 
 [plugins]
@@ -83,6 +93,7 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 google-services = { id = "com.google.gms.google-services", version = "4.4.4" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.7" }
 firebase-perf = { id = "com.google.firebase.firebase-perf", version = "2.0.2" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
 [bundles]
 firebase = ["firebase-analytics", "firebase-auth", "firebase-firestore", "firebase-storage",
