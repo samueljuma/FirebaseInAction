@@ -10,12 +10,14 @@ import com.samueljuma.firebaseinaction.core.utils.toUiText
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.notes.CreateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.model.Note
+import com.samueljuma.firebaseinaction.domain.util.IdGenerator
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.launch
 
 class CreateNoteViewModel(
     private val createNoteUseCase: CreateNoteUseCase,
-    private val getSessionUseCase: GetSessionUseCase
+    private val getSessionUseCase: GetSessionUseCase,
+    private val idGenerator: IdGenerator
 ) : MviViewModel<CreateNoteState, CreateNoteAction, CreateNoteEvent>(
     CreateNoteState()
 ) {
@@ -58,10 +60,7 @@ class CreateNoteViewModel(
             }
 
             // Generate ID locally — offline-first
-            val noteId = FirebaseFirestore.getInstance()
-                .collection("users/$userId/notes")
-                .document()
-                .id
+            val noteId = idGenerator.generate()
 
             val note = Note(
                 id = noteId,

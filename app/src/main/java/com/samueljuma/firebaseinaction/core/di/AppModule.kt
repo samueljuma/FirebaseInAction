@@ -11,6 +11,7 @@ import com.samueljuma.firebaseinaction.data.auth.GoogleAuthHandler
 import com.samueljuma.firebaseinaction.data.notes.NoteRepositoryImpl
 import com.samueljuma.firebaseinaction.data.notes.NoteSyncWorker
 import com.samueljuma.firebaseinaction.data.notes.local.AppDatabase
+import com.samueljuma.firebaseinaction.data.util.FirestoreIdGenerator
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ClearSessionUseCase
@@ -28,6 +29,7 @@ import com.samueljuma.firebaseinaction.domain.notes.GetNotesUseCase
 import com.samueljuma.firebaseinaction.domain.notes.NoteRepository
 import com.samueljuma.firebaseinaction.domain.notes.StartRemoteSyncUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
+import com.samueljuma.firebaseinaction.domain.util.IdGenerator
 import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeViewModel
@@ -83,6 +85,7 @@ val appModule = module {
     // Notes Repository
     singleOf(::NoteRepositoryImpl).bind<NoteRepository>()
 
+    singleOf(::FirestoreIdGenerator).bind<IdGenerator>()
     // Notes UseCases
     factoryOf(::GetNotesUseCase)
     factoryOf(::CreateNoteUseCase)
