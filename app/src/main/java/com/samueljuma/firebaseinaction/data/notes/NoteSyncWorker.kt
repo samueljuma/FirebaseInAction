@@ -18,6 +18,7 @@ class NoteSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        Timber.tag("NoteSyncWorker").d("Worker started")
         val session = getSessionUseCase()
             ?: return Result.failure() // No session — nothing to sync
 

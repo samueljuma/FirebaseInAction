@@ -9,6 +9,7 @@ import com.samueljuma.firebaseinaction.data.auth.AuthRepositoryImpl
 import com.samueljuma.firebaseinaction.data.auth.DataStoreSessionStorage
 import com.samueljuma.firebaseinaction.data.auth.GoogleAuthHandler
 import com.samueljuma.firebaseinaction.data.notes.NoteRepositoryImpl
+import com.samueljuma.firebaseinaction.data.notes.NoteSyncWorker
 import com.samueljuma.firebaseinaction.data.notes.local.AppDatabase
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
@@ -28,9 +29,11 @@ import com.samueljuma.firebaseinaction.domain.notes.NoteRepository
 import com.samueljuma.firebaseinaction.domain.notes.StartRemoteSyncUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
 import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
+import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.main.MainViewModel
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
@@ -87,4 +90,6 @@ val appModule = module {
     factoryOf(::DeleteNoteUseCase)
     factoryOf(::StartRemoteSyncUseCase)
     viewModelOf(::HomeViewModel)
+    viewModelOf(::CreateNoteViewModel)
+    workerOf(::NoteSyncWorker)
 }

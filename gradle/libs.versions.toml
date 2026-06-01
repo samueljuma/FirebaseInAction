@@ -57,6 +57,7 @@ firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "fireb
 koin-core = { module ="io.insert-koin:koin-core", version.ref = "koin"}
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin"}
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin"}
+koin-android-workmanager = { group = "io.insert-koin", name = "koin-androidx-workmanager", version.ref = "koin" }
 
 # Navigation
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
@@ -99,5 +100,5 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 firebase = ["firebase-analytics", "firebase-auth", "firebase-firestore", "firebase-storage",
     "firebase-messaging","firebase-crashlytics", "firebase-config", "firebase-perf", "firebase-appcheck-playintegrity"
 ]
-koin = [ "koin-core", "koin-android","koin-androidx-compose"]
+koin = [ "koin-core", "koin-android", "koin-androidx-compose", "koin-android-workmanager"]
 lifecycle = ["lifecycle-viewmodel-compose", "compose-lifecycle"]

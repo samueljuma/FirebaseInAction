@@ -18,4 +18,5 @@
     <string name="error_disk_full">Device storage is full</string>
     <string name="error_object_not_found">File not found</string>
     <string name="error_file_too_large">File is too large to upload</string>
+    <string name="error_title_empty">Title is empty!</string>
 </resources>

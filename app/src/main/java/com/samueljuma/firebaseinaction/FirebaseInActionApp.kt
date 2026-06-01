@@ -4,6 +4,7 @@ import android.app.Application
 import com.samueljuma.firebaseinaction.core.di.appModule
 import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.startKoin
 import timber.log.Timber
 
@@ -18,6 +19,7 @@ class FirebaseInActionApp : Application() {
 
         startKoin {
             androidContext(this@FirebaseInActionApp)
+            workManagerFactory()
             modules(appModule)
         }
     }

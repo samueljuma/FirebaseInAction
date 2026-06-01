@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.auth.LoginScreenRot
 import com.samueljuma.firebaseinaction.presentation.ui.auth.SignUpScreenRoot
+import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeScreenRoot
 import org.koin.androidx.compose.koinViewModel
 import timber.log.Timber
@@ -85,6 +86,12 @@ fun AppNavHost(
                         AppScreens.NoteDetailScreen.route.replace("{noteId}", noteId)
                     )
                 }
+            )
+        }
+
+        composable(route = AppScreens.CreateNoteScreen.route) {
+            CreateNoteScreenRoot(
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     }

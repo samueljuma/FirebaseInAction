@@ -27,6 +27,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
@@ -59,7 +62,7 @@ class NoteRepositoryImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.tag("NoteRepo").e(e, "Failed to create note locally")
+            Timber.tag(TAG).e(e, "Failed to create note locally")
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
@@ -77,7 +80,7 @@ class NoteRepositoryImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.tag("NoteRepo").e(e, "Failed to update note locally")
+            Timber.tag(TAG).e(e, "Failed to update note locally")
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
@@ -95,7 +98,7 @@ class NoteRepositoryImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Timber.tag("NoteRepo").e(e, "Failed to delete note")
+            Timber.tag(TAG).e(e, "Failed to delete note")
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
@@ -104,14 +107,18 @@ class NoteRepositoryImpl(
         val userId = getCurrentUserId()
         return firestoreSafeCall {
             val unsyncedNotes = noteDao.getUnsyncedNotes(userId)
-            Timber.tag("NoteRepo").d("Syncing ${unsyncedNotes.size} unsynced notes")
-            unsyncedNotes.forEach { entity ->
-                firestore
-                    .document("users/$userId/notes/${entity.id}")
-                    .set(entity.toDto())
-                    .await()
-                noteDao.markAsSynced(entity.id)
-                Timber.tag("NoteRepo").d("Synced note: ${entity.id}")
+            Timber.tag(TAG).d("Syncing ${unsyncedNotes.size} unsynced notes")
+            coroutineScope {
+                unsyncedNotes.map { entity ->
+                    async {
+                        firestore
+                            .document("users/$userId/notes/${entity.id}")
+                            .set(entity.toDto())
+                            .await()
+                        noteDao.markAsSynced(entity.id)
+                        Timber.tag(TAG).d("Synced note: ${entity.id}")
+                    }
+                }.awaitAll()
             }
         }
     }
@@ -124,7 +131,7 @@ class NoteRepositoryImpl(
                     .collection("users/$userId/notes")
                     .addSnapshotListener { snapshot, error ->
                         if (error != null) {
-                            Timber.tag("NoteRepo").e(error, "Firestore listener error")
+                            Timber.tag(TAG).e(error, "Firestore listener error")
                             return@addSnapshotListener
                         }
                         snapshot?.documents?.let { documents ->
@@ -132,16 +139,16 @@ class NoteRepositoryImpl(
                                 val entities = documents.mapNotNull { doc ->
                                     doc.toObject(NoteDto::class.java)?.toEntity()
                                 }
-                                noteDao.upsertNotes(entities)
-                                Timber.tag("NoteRepo").d(
-                                    "Remote sync: upserted ${entities.size} notes"
+                                noteDao.upsertRemoteNotes(entities, userId)
+                                Timber.tag(TAG).d(
+                                    "Remote sync: processed ${entities.size} remote notes"
                                 )
                             }
                         }
                         trySend(Unit)
                     }
                 awaitClose {
-                    Timber.tag("NoteRepo").d("Stopping Firestore listener")
+                    Timber.tag(TAG).d("Stopping Firestore listener")
                     listener.remove()
                 }
             }
@@ -149,6 +156,7 @@ class NoteRepositoryImpl(
     }
 
     private fun enqueueSyncWork() {
+        Timber.tag(TAG).d("Enqueuing sync work")
         val syncRequest = OneTimeWorkRequestBuilder<NoteSyncWorker>()
             .setConstraints(
                 Constraints.Builder()
@@ -164,8 +172,12 @@ class NoteRepositoryImpl(
 
         workManager.enqueueUniqueWork(
             NoteSyncWorker.WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             syncRequest
         )
+    }
+
+    companion object {
+        const val TAG = "NoteRepository"
     }
 }

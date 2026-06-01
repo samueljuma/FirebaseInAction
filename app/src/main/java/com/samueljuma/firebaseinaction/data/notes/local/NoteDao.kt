@@ -25,4 +25,9 @@ interface NoteDao {
 
     @Query("UPDATE notes SET isSynced = 1 WHERE id = :noteId")
     suspend fun markAsSynced(noteId: String)
+
+    suspend fun upsertRemoteNotes(notes: List<NoteEntity>, userId: String) {
+        val unsyncedIds = getUnsyncedNotes(userId).map { it.id }.toSet()
+        upsertNotes(notes.filter { it.id !in unsyncedIds })
+    }
 }
