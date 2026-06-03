@@ -16,8 +16,6 @@ import kotlinx.coroutines.launch
 
 class CreateNoteViewModel(
     private val createNoteUseCase: CreateNoteUseCase,
-    private val getSessionUseCase: GetSessionUseCase,
-    private val idGenerator: IdGenerator
 ) : MviViewModel<CreateNoteState, CreateNoteAction, CreateNoteEvent>(
     CreateNoteState()
 ) {
@@ -34,46 +32,20 @@ class CreateNoteViewModel(
     }
 
     private fun saveNote() {
+        val title = state.value.title.trim()
+        val content = state.value.content.trim()
+
+        if (title.isBlank()) {
+            emitEvent(CreateNoteEvent.ShowSnackbar(
+                UiText.StringResource(R.string.error_title_empty)
+            ))
+            return
+        }
+
         viewModelScope.launch {
-            val title = state.value.title.trim()
-            val content = state.value.content.trim()
-
-            if (title.isBlank()) {
-                emitEvent(
-                    CreateNoteEvent.ShowSnackbar(
-                        UiText.StringResource(R.string.error_title_empty)
-                    )
-                )
-                return@launch
-            }
-
             updateState { copy(isSaving = true) }
 
-            val userId = getSessionUseCase()?.uid ?: run {
-                emitEvent(
-                    CreateNoteEvent.ShowSnackbar(
-                        UiText.StringResource(R.string.error_unknown)
-                    )
-                )
-                updateState { copy(isSaving = false) }
-                return@launch
-            }
-
-            // Generate ID locally — offline-first
-            val noteId = idGenerator.generate()
-
-            val note = Note(
-                id = noteId,
-                userId = userId,
-                title = title,
-                content = content,
-                createdAt = System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis(),
-                isPinned = false,
-                isSynced = false
-            )
-
-            createNoteUseCase(note)
+            createNoteUseCase(title = title, content = content)
                 .onSuccess { emitEvent(CreateNoteEvent.NavigateBack) }
                 .onError { error ->
                     emitEvent(CreateNoteEvent.ShowSnackbar(error.toUiText()))

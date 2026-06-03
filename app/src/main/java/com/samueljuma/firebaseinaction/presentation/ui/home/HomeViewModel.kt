@@ -3,6 +3,7 @@ package com.samueljuma.firebaseinaction.presentation.ui.home
 import HomeAction
 import HomeEvent
 import androidx.lifecycle.viewModelScope
+import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
