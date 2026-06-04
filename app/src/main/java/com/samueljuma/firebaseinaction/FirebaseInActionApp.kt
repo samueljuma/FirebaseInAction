@@ -1,7 +1,7 @@
 package com.samueljuma.firebaseinaction
 
 import android.app.Application
-import com.samueljuma.firebaseinaction.core.di.appModule
+import com.samueljuma.firebaseinaction.core.di.appModules
 import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
@@ -20,7 +20,7 @@ class FirebaseInActionApp : Application() {
         startKoin {
             androidContext(this@FirebaseInActionApp)
             workManagerFactory()
-            modules(appModule)
+            modules(appModules)
         }
     }
 }
