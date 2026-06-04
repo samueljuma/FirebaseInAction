@@ -3,14 +3,17 @@ package com.samueljuma.firebaseinaction.core.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.auth.LoginScreenRot
 import com.samueljuma.firebaseinaction.presentation.ui.auth.SignUpScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeScreenRoot
+import com.samueljuma.firebaseinaction.presentation.ui.notedetails.NoteDetailScreenRoot
 import org.koin.androidx.compose.koinViewModel
 import timber.log.Timber
 
@@ -91,6 +94,15 @@ fun AppNavHost(
 
         composable(route = AppScreens.CreateNoteScreen.route) {
             CreateNoteScreenRoot(
+                onNavigateBack = { navController.navigateUp() }
+            )
+        }
+
+        composable(
+            route = AppScreens.NoteDetailScreen.route,
+            arguments = listOf(navArgument("noteId") { type = NavType.StringType })
+        ) {
+            NoteDetailScreenRoot(
                 onNavigateBack = { navController.navigateUp() }
             )
         }

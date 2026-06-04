@@ -54,6 +54,13 @@ class NoteRepositoryImpl(
         )
     }
 
+    override fun getNoteById(noteId: String): Flow<Note?> = flow {
+        emitAll(
+            noteDao.getNoteById(noteId)
+                .map { it?.toNote() }
+        )
+    }
+
     override suspend fun createNote(note: Note): Result<Unit, DataError> {
         return try {
             noteDao.upsertNote(note.toEntity().copy(isSynced = false))
@@ -85,15 +92,12 @@ class NoteRepositoryImpl(
         }
     }
 
+
     override suspend fun deleteNote(noteId: String): Result<Unit, DataError> {
         return try {
-            val userId = getCurrentUserId()
-            noteDao.deleteNote(noteId)
-            firestoreSafeCall {
-                firestore.document("users/$userId/notes/$noteId")
-                    .delete()
-                    .await()
-            }
+            // Soft delete locally — WorkManager will push to Firestore
+            noteDao.softDeleteNote(noteId)
+            enqueueSyncWork()
             Result.Success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -111,15 +115,27 @@ class NoteRepositoryImpl(
             coroutineScope {
                 unsyncedNotes.map { entity ->
                     async {
-                        firestore
-                            .document("users/$userId/notes/${entity.id}")
-                            .set(entity.toDto())
-                            .await()
-                        noteDao.markAsSynced(entity.id)
-                        Timber.tag(TAG).d("Synced note: ${entity.id}")
+                        if (entity.isDeleted) {
+                            // Push deletion to Firestore
+                            firestore.document("users/$userId/notes/${entity.id}")
+                                .delete()
+                                .await()
+                            // Hard delete from Room — no longer needed
+                            noteDao.hardDeleteNote(entity.id)
+                            Timber.tag(TAG).d("Synced deletion: ${entity.id}")
+                        } else {
+                            // Push update/create to Firestore
+                            firestore.document("users/$userId/notes/${entity.id}")
+                                .set(entity.toDto())
+                                .await()
+                            noteDao.markAsSynced(entity.id)
+                            Timber.tag(TAG).d("Synced note: ${entity.id}")
+                        }
                     }
+
                 }.awaitAll()
             }
+
         }
     }
 

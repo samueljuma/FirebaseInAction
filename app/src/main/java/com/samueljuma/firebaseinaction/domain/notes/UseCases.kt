@@ -11,6 +11,11 @@ class GetNotesUseCase(private val repository: NoteRepository) {
     operator fun invoke(): Flow<List<Note>> = repository.getNotes()
 }
 
+class GetNoteByIdUseCase(private val repository: NoteRepository) {
+    operator fun invoke(noteId: String): Flow<Note?> =
+        repository.getNoteById(noteId)
+}
+
 class DeleteNoteUseCase(private val repository: NoteRepository) {
     suspend operator fun invoke(noteId: String): Result<Unit, DataError> =
         repository.deleteNote(noteId)
