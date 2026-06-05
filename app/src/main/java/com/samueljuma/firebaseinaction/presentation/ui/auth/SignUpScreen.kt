@@ -36,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +73,12 @@ fun SignUpScreenRoot(
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(event.message, context)
                 }
+            }
+            AuthEvent.SignUp.OpenGoogleAccountSettings -> {
+                val intent = Intent(Settings.ACTION_ADD_ACCOUNT).apply {
+                    putExtra(Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google"))
+                }
+                context.startActivity(intent)
             }
             else -> Unit
         }

@@ -7,11 +7,13 @@ sealed interface AuthEvent {
     sealed interface Login : AuthEvent {
         data object LoginSuccess : Login
         data class ShowSnackbar(val message: UiText) : Login
+        data object OpenGoogleAccountSettings : Login
     }
 
     // SignUp screen events
     sealed interface SignUp : AuthEvent {
         data object SignUpSuccess : SignUp
         data class ShowSnackbar(val message: UiText) : SignUp
+        data object OpenGoogleAccountSettings : SignUp
     }
 }

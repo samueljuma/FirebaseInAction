@@ -3,6 +3,7 @@ package com.samueljuma.firebaseinaction.core.utils
 import android.util.Log
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
@@ -56,6 +57,9 @@ suspend fun googleSignInSafeCall(
     } catch (e: GetCredentialCancellationException) {
         Timber.tag("GoogleAuth").d("User cancelled Google Sign-In")
         Result.Error(DataError.Auth.CANCELLED)
+    } catch (e: NoCredentialException) {
+        Timber.tag("GoogleAuth").w(e, "No Google account on device")
+        Result.Error(DataError.Auth.NO_GOOGLE_ACCOUNT)
     } catch (e: GetCredentialException) {
         Timber.tag("GoogleAuth").e(e, "Credential manager error")
         Result.Error(DataError.Auth.GOOGLE_SIGN_IN_FAILED)

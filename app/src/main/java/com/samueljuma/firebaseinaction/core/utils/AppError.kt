@@ -14,6 +14,7 @@ sealed interface DataError : AppError {
         INVALID_EMAIL,
         INVALID_PASSWORD,
         CANCELLED,
+        NO_GOOGLE_ACCOUNT,
         GOOGLE_SIGN_IN_FAILED,
         NETWORK_ERROR,                // no internet during auth
         UNKNOWN,                       // safety net

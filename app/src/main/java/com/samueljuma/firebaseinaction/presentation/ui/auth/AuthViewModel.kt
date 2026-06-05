@@ -50,9 +50,16 @@ class AuthViewModel(
                         }
                 }
                 .onError { error ->
-                    // Silently ignore cancellation — user chose to dismiss
-                    if (error != DataError.Auth.CANCELLED) {
-                        emitEvent(AuthEvent.Login.ShowSnackbar(error.toUiText()))
+                    when (error) {
+                        DataError.Auth.CANCELLED -> Unit
+                        DataError.Auth.NO_GOOGLE_ACCOUNT -> {
+                            emitEvent(AuthEvent.Login.OpenGoogleAccountSettings)
+                            emitEvent(AuthEvent.SignUp.OpenGoogleAccountSettings)
+                        }
+                        else -> {
+                            emitEvent(AuthEvent.Login.ShowSnackbar(error.toUiText()))
+                            emitEvent(AuthEvent.SignUp.ShowSnackbar(error.toUiText()))
+                        }
                     }
                 }
 
