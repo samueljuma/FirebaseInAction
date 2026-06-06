@@ -61,8 +61,13 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun signOut(): Result<Unit, DataError.Auth> = firebaseAuthSafeCall {
-        firebaseAuth.signOut()
+        // Clear session BEFORE signing out of Firebase. firebaseAuth.signOut() fires
+        // the AuthStateListener synchronously, and observeTokenExpiry() uses the presence
+        // of a DataStore session to distinguish an explicit sign-out (session already gone)
+        // from an unexpected token expiry (session still present). Reversing the order
+        // would cause observeTokenExpiry() to incorrectly show the SessionExpiredDialog.
         sessionStorage.clear()
+        firebaseAuth.signOut()
     }
 
     override suspend fun signInWithGoogle(

@@ -98,9 +98,21 @@ class MainViewModel(
             getCurrentUserUseCase().collect { user ->
                 Timber.tag(TAG).d("Auth state emission — user: ${user?.uid ?: "null"}")
                 if (user == null && state.isLoggedIn) {
-                    Timber.tag(TAG).w("Session expired — clearing")
-                    clearSessionUseCase()
-                    state = state.copy(sessionExpired = true)
+                    // Check whether a session still exists in DataStore to distinguish:
+                    //   - Explicit sign-out: signOut() clears DataStore before calling
+                    //     firebaseAuth.signOut(), so the session is already gone here.
+                    //     Just update isLoggedIn — no dialog.
+                    //   - Unexpected expiry / account deleted: the session is still in
+                    //     DataStore because nobody cleared it. Clear it and show the dialog.
+                    val sessionExists = getSessionUseCase() != null
+                    if (sessionExists) {
+                        Timber.tag(TAG).w("Session expired unexpectedly — clearing")
+                        clearSessionUseCase()
+                        state = state.copy(sessionExpired = true)
+                    } else {
+                        Timber.tag(TAG).d("Explicit sign-out detected — no dialog")
+                        state = state.copy(isLoggedIn = false)
+                    }
                 }
             }
         }
