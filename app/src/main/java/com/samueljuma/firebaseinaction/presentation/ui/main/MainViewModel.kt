@@ -56,9 +56,12 @@ class MainViewModel(
             // Phase 2: Start observers — non-blocking
             observeTokenExpiry()
 
-            // Phase 3: Background server verification — only if locally logged in
-            // Does not block splash screen or initial navigation
-            if (state.isLoggedIn) {
+            // Phase 3: Background server verification — only for fully established sessions.
+            // Skipped for unverified users: EmailVerificationScreen's checkVerification()
+            // already calls reloadCurrentUser(), so they get server validation there.
+            // Running reload() concurrently with sendEmailVerification() in init causes a
+            // race where Firebase's token re-validation transiently clears currentUser.
+            if (state.isLoggedIn && state.isEmailVerified) {
                 verifySessionWithServer()
             }
         }
