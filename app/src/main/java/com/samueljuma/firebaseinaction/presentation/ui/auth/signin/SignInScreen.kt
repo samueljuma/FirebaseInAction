@@ -1,5 +1,7 @@
-package com.samueljuma.firebaseinaction.presentation.ui.auth
+package com.samueljuma.firebaseinaction.presentation.ui.auth.signin
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,8 +37,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,15 +47,16 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.samueljuma.firebaseinaction.R
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.core.utils.showSnackbar
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import kotlinx.coroutines.launch
-import com.samueljuma.firebaseinaction.R
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun LoginScreenRot(
-    viewModel: AuthViewModel,
+fun SignInScreenRoot(
+    viewModel: SignInViewModel = koinViewModel(),
     onNavigateToHome: () -> Unit,
     onNavigateToSignUp: () -> Unit
 ) {
@@ -63,12 +64,13 @@ fun LoginScreenRot(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    LoginScreen(
+
+    SignInScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onAction = { action ->
-            when(action){
-                AuthAction.OnGoToSignUp -> onNavigateToSignUp()
+            when (action) {
+                SignInAction.OnGoToSignUp -> onNavigateToSignUp()
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -76,38 +78,37 @@ fun LoginScreenRot(
     )
 
     ObserveAsEvents(viewModel.events) { event ->
-        when(event){
-            AuthEvent.Login.LoginSuccess -> onNavigateToHome()
-            is AuthEvent.Login.ShowSnackbar -> {
+        when (event) {
+            SignInEvent.SignInSuccess -> onNavigateToHome()
+            is SignInEvent.ShowSnackbar -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(event.message, context)
                 }
             }
-            AuthEvent.Login.OpenGoogleAccountSettings -> {
+            SignInEvent.OpenGoogleAccountSettings -> {
                 val intent = Intent(Settings.ACTION_ADD_ACCOUNT).apply {
                     putExtra(Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google"))
                 }
                 context.startActivity(intent)
             }
-            else -> Unit
         }
     }
 }
 
 @Composable
-private fun LoginScreen(
-    state: AuthState,
+private fun SignInScreen(
+    state: SignInState,
     snackbarHostState: SnackbarHostState,
-    onAction: (AuthAction) -> Unit
+    onAction: (SignInAction) -> Unit
 ) {
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        content = {padding ->
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+        content = { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -134,7 +135,7 @@ private fun LoginScreen(
 
                 OutlinedTextField(
                     value = state.email,
-                    onValueChange = { onAction(AuthAction.OnEmailChanged(it)) },
+                    onValueChange = { onAction(SignInAction.OnEmailChanged(it)) },
                     label = { Text("Email") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -149,7 +150,7 @@ private fun LoginScreen(
 
                 OutlinedTextField(
                     value = state.password,
-                    onValueChange = { onAction(AuthAction.OnPasswordChanged(it)) },
+                    onValueChange = { onAction(SignInAction.OnPasswordChanged(it)) },
                     label = { Text("Password") },
                     visualTransformation = if (state.isPasswordVisible)
                         VisualTransformation.None
@@ -161,7 +162,7 @@ private fun LoginScreen(
                     ),
                     trailingIcon = {
                         IconButton(
-                            onClick = { onAction(AuthAction.OnTogglePasswordVisibility) }
+                            onClick = { onAction(SignInAction.OnTogglePasswordVisibility) }
                         ) {
                             Icon(
                                 imageVector = if (state.isPasswordVisible)
@@ -177,7 +178,7 @@ private fun LoginScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { onAction(AuthAction.OnSignInClicked) },
+                    onClick = { onAction(SignInAction.OnSignInClicked) },
                     enabled = !state.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -212,7 +213,7 @@ private fun LoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedButton(
-                    onClick = { onAction(AuthAction.OnGoogleSignInClicked) },
+                    onClick = { onAction(SignInAction.OnGoogleSignInClicked) },
                     enabled = !state.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -234,22 +235,22 @@ private fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(onClick = {onAction(AuthAction.OnGoToSignUp)}) {
-                    Text("Don't have an account? Sign Up",)
+                TextButton(onClick = { onAction(SignInAction.OnGoToSignUp) }) {
+                    Text("Don't have an account? Sign Up")
                 }
-
             }
         }
     )
 }
+
 @PreviewLightDark
 @Composable
-private fun LoginScreenPreview() {
-    AppTheme{
-       LoginScreen(
-           state = AuthState(),
-           snackbarHostState = remember { SnackbarHostState() },
-           onAction = {}
-       )
-   }
+private fun SignInScreenPreview() {
+    AppTheme {
+        SignInScreen(
+            state = SignInState(),
+            snackbarHostState = remember { SnackbarHostState() },
+            onAction = {}
+        )
+    }
 }

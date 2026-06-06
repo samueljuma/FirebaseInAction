@@ -17,8 +17,9 @@ import com.samueljuma.firebaseinaction.domain.auth.usecases.SendEmailVerificatio
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignInUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignOutUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignUpUseCase
-import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.auth.emailverification.EmailVerificationViewModel
+import com.samueljuma.firebaseinaction.presentation.ui.auth.signin.SignInViewModel
+import com.samueljuma.firebaseinaction.presentation.ui.auth.signup.SignUpViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.main.MainViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.factoryOf
@@ -48,7 +49,8 @@ val authModule = module {
     factoryOf(::ClearSessionUseCase)
     factoryOf(::SendEmailVerificationUseCase)
     factoryOf(::ReloadCurrentUserUseCase)
-    viewModelOf(::AuthViewModel)
+    viewModelOf(::SignInViewModel)
+    viewModelOf(::SignUpViewModel)
     viewModelOf(::EmailVerificationViewModel)
     viewModelOf(::MainViewModel)
 }

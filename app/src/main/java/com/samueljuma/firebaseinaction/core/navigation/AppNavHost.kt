@@ -2,20 +2,17 @@ package com.samueljuma.firebaseinaction.core.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.samueljuma.firebaseinaction.presentation.ui.auth.AuthViewModel
-import com.samueljuma.firebaseinaction.presentation.ui.auth.LoginScreenRot
-import com.samueljuma.firebaseinaction.presentation.ui.auth.SignUpScreenRoot
+import com.samueljuma.firebaseinaction.presentation.ui.auth.signin.SignInScreenRoot
+import com.samueljuma.firebaseinaction.presentation.ui.auth.signup.SignUpScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.auth.emailverification.EmailVerificationScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.notedetails.NoteDetailScreenRoot
-import org.koin.androidx.compose.koinViewModel
 import timber.log.Timber
 
 @Composable
@@ -24,7 +21,6 @@ fun AppNavHost(
     isEmailVerified: Boolean
 ){
     val navController = rememberNavController()
-    val authViewModel: AuthViewModel = koinViewModel()
 
     val startDestination = when {
         !isLoggedIn -> AppScreens.LoginScreen.route
@@ -46,8 +42,7 @@ fun AppNavHost(
         navController = navController
     ) { 
         composable(route = AppScreens.LoginScreen.route) {
-            LoginScreenRot(
-                viewModel = authViewModel,
+            SignInScreenRoot(
                 onNavigateToHome = {
                     navController.navigate(AppScreens.HomeScreen.route) {
                         popUpTo(0) { inclusive = true }
@@ -62,7 +57,6 @@ fun AppNavHost(
         }
         composable(AppScreens.SignUpScreen.route) {
             SignUpScreenRoot(
-                viewModel = authViewModel,
                 onNavigateToHome = {
                     navController.navigate(AppScreens.EmailVerificationScreen.route) {
                         popUpTo(0) { inclusive = true }

@@ -1,5 +1,7 @@
-package com.samueljuma.firebaseinaction.presentation.ui.auth
+package com.samueljuma.firebaseinaction.presentation.ui.auth.signup
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,10 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,14 +49,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.R
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
-import com.samueljuma.firebaseinaction.core.utils.UiText
 import com.samueljuma.firebaseinaction.core.utils.showSnackbar
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun SignUpScreenRoot(
-    viewModel: AuthViewModel,
+    viewModel: SignUpViewModel = koinViewModel(),
     onNavigateToHome: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
@@ -67,29 +66,28 @@ fun SignUpScreenRoot(
     val coroutineScope = rememberCoroutineScope()
 
     ObserveAsEvents(viewModel.events) { event ->
-        when(event){
-            AuthEvent.SignUp.SignUpSuccess -> onNavigateToHome()
-            is AuthEvent.SignUp.ShowSnackbar -> {
+        when (event) {
+            SignUpEvent.SignUpSuccess -> onNavigateToHome()
+            is SignUpEvent.ShowSnackbar -> {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar(event.message, context)
                 }
             }
-            AuthEvent.SignUp.OpenGoogleAccountSettings -> {
+            SignUpEvent.OpenGoogleAccountSettings -> {
                 val intent = Intent(Settings.ACTION_ADD_ACCOUNT).apply {
                     putExtra(Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google"))
                 }
                 context.startActivity(intent)
             }
-            else -> Unit
         }
     }
 
-    SignUpScreenScreen(
+    SignUpScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onAction = { action ->
-            when(action){
-                AuthAction.OnGoToLogin -> onNavigateToLogin()
+            when (action) {
+                SignUpAction.OnGoToLogin -> onNavigateToLogin()
                 else -> Unit
             }
             viewModel.onAction(action)
@@ -98,14 +96,14 @@ fun SignUpScreenRoot(
 }
 
 @Composable
-private fun SignUpScreenScreen(
-    state: AuthState,
+private fun SignUpScreen(
+    state: SignUpState,
     snackbarHostState: SnackbarHostState,
-    onAction: (AuthAction) -> Unit
+    onAction: (SignUpAction) -> Unit
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        content = { padding->
+        content = { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -139,7 +137,7 @@ private fun SignUpScreenScreen(
 
                 OutlinedTextField(
                     value = state.email,
-                    onValueChange = { onAction(AuthAction.OnEmailChanged(it)) },
+                    onValueChange = { onAction(SignUpAction.OnEmailChanged(it)) },
                     label = { Text("Email") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -154,7 +152,7 @@ private fun SignUpScreenScreen(
 
                 OutlinedTextField(
                     value = state.password,
-                    onValueChange = { onAction(AuthAction.OnPasswordChanged(it)) },
+                    onValueChange = { onAction(SignUpAction.OnPasswordChanged(it)) },
                     label = { Text("Password") },
                     visualTransformation = if (state.isPasswordVisible)
                         VisualTransformation.None
@@ -166,7 +164,7 @@ private fun SignUpScreenScreen(
                     ),
                     trailingIcon = {
                         IconButton(
-                            onClick = { onAction(AuthAction.OnTogglePasswordVisibility) }
+                            onClick = { onAction(SignUpAction.OnTogglePasswordVisibility) }
                         ) {
                             Icon(
                                 imageVector = if (state.isPasswordVisible)
@@ -185,7 +183,7 @@ private fun SignUpScreenScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { onAction(AuthAction.OnSignUpClicked) },
+                    onClick = { onAction(SignUpAction.OnSignUpClicked) },
                     enabled = !state.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -202,7 +200,6 @@ private fun SignUpScreenScreen(
                         Text("Create Account")
                     }
                 }
-
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -221,7 +218,7 @@ private fun SignUpScreenScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedButton(
-                    onClick = { onAction(AuthAction.OnGoogleSignInClicked) },
+                    onClick = { onAction(SignUpAction.OnGoogleSignInClicked) },
                     enabled = !state.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -243,21 +240,20 @@ private fun SignUpScreenScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(onClick = {onAction(AuthAction.OnGoToLogin)}) {
+                TextButton(onClick = { onAction(SignUpAction.OnGoToLogin) }) {
                     Text("Already have an account? Sign In")
                 }
-
             }
         }
     )
-
 }
+
 @PreviewLightDark
 @Composable
-private fun SignUpScreenScreenDarkPreview() {
-    AppTheme{
-        SignUpScreenScreen(
-            state = AuthState(),
+private fun SignUpScreenPreview() {
+    AppTheme {
+        SignUpScreen(
+            state = SignUpState(),
             snackbarHostState = remember { SnackbarHostState() },
             onAction = {}
         )
