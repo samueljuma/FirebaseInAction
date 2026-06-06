@@ -40,7 +40,11 @@ class MainViewModel(
 
             state = when {
                 localSession != null && currentUser != null ->
-                    state.copy(isCheckingAuth = false, isLoggedIn = true)
+                    state.copy(
+                        isCheckingAuth = false,
+                        isLoggedIn = true,
+                        isEmailVerified = currentUser.isEmailVerified
+                    )
                 localSession != null && currentUser == null -> {
                     clearSessionUseCase()
                     state.copy(isCheckingAuth = false, isLoggedIn = false)

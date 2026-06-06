@@ -72,4 +72,10 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         user
     }
+
+    override suspend fun sendEmailVerification(): Result<Unit, DataError.Auth> =
+        firebaseAuthSafeCall {
+            firebaseAuth.currentUser?.sendEmailVerification()?.await()
+                ?: error("No current user")
+        }
 }
