@@ -1,12 +1,5 @@
 package com.samueljuma.firebaseinaction.data.notes
 
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.WorkRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.data.notes.local.NoteDao
@@ -18,10 +11,10 @@ import kotlinx.coroutines.flow.map
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.firestoreSafeCall
 import com.samueljuma.firebaseinaction.data.notes.remote.NoteDto
-import com.samueljuma.firebaseinaction.data.notes.workers.NoteSyncWorker
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toDto
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toEntity
+import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -34,13 +27,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
 class NoteRepositoryImpl(
     private val noteDao: NoteDao,
     private val firestore: FirebaseFirestore,
-    private val workManager: WorkManager,
+    private val syncScheduler: SyncScheduler,
     private val sessionStorage: SessionStorage
 ) : NoteRepository {
 
@@ -65,7 +57,7 @@ class NoteRepositoryImpl(
     override suspend fun createNote(note: Note): Result<Unit, DataError> {
         return try {
             noteDao.upsertNote(note.toEntity().copy(isSynced = false))
-            enqueueSyncWork()
+            syncScheduler.scheduleNotesSync()
             Result.Success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -83,7 +75,7 @@ class NoteRepositoryImpl(
                     isSynced = false
                 )
             )
-            enqueueSyncWork()
+            syncScheduler.scheduleNotesSync()
             Result.Success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -93,12 +85,23 @@ class NoteRepositoryImpl(
         }
     }
 
+    override suspend fun updateNoteImageUrl(noteId: String, imageUrl: String): Result<Unit, DataError> {
+        return try {
+            noteDao.updateNoteImageUrl(noteId, imageUrl)
+            syncScheduler.scheduleNotesSync()
+            Result.Success(Unit)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Failed to update image URL for note $noteId")
+            Result.Error(DataError.Local.UNKNOWN)
+        }
+    }
 
     override suspend fun deleteNote(noteId: String): Result<Unit, DataError> {
         return try {
-            // Soft delete locally — WorkManager will push to Firestore
             noteDao.softDeleteNote(noteId)
-            enqueueSyncWork()
+            syncScheduler.scheduleNotesSync()
             Result.Success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -169,28 +172,6 @@ class NoteRepositoryImpl(
                     listener.remove()
                 }
             }
-        )
-    }
-
-    private fun enqueueSyncWork() {
-        Timber.tag(TAG).d("Enqueuing sync work")
-        val syncRequest = OneTimeWorkRequestBuilder<NoteSyncWorker>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                WorkRequest.MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS
-            )
-            .build()
-
-        workManager.enqueueUniqueWork(
-            NoteSyncWorker.WORK_NAME,
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            syncRequest
         )
     }
 

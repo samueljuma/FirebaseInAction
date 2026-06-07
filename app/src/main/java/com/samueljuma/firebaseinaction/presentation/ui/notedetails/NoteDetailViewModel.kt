@@ -53,7 +53,8 @@ class NoteDetailViewModel(
                             isSynced = note.isSynced,
                             isLoading = false,
                             createdAt = note.createdAt,
-                            lastUpdated = note.updatedAt
+                            lastUpdated = note.updatedAt,
+                            imageUrl = note.imageUrl
                         )
                     }
                 }
@@ -122,7 +123,8 @@ class NoteDetailViewModel(
         createdAt = state.value.createdAt,
         updatedAt = System.currentTimeMillis(),
         isPinned = isPinned,
-        isSynced = false
+        isSynced = false,
+        imageUrl = state.value.imageUrl
     )
 
     private fun uploadImage(uri: Uri) {

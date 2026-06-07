@@ -18,18 +18,18 @@ class NoteSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        Timber.Forest.tag("NoteSyncWorker").d("Worker started")
+        Timber.tag("NoteSyncWorker").d("Worker started")
         val session = getSessionUseCase()
             ?: return Result.failure() // No session — nothing to sync
 
-        Timber.Forest.tag(WORK_NAME).d("Starting note sync for user: ${session.uid}")
+        Timber.tag(WORK_NAME).d("Starting note sync for user: ${session.uid}")
 
         return noteRepository.syncNotes()
             .onSuccess {
-                Timber.Forest.tag(WORK_NAME).d("Note sync completed successfully")
+                Timber.tag(WORK_NAME).d("Note sync completed successfully")
             }
             .onError { error ->
-                Timber.Forest.tag(WORK_NAME).e("Note sync failed: $error")
+                Timber.tag(WORK_NAME).e("Note sync failed: $error")
             }
             .let { result ->
                 when (result) {

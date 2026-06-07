@@ -39,6 +39,9 @@ interface NoteDao {
 
     @Query("UPDATE notes SET isSynced = 1 WHERE id = :noteId")
     suspend fun markAsSynced(noteId: String)
+
+    @Query("UPDATE notes SET imageUrl = :imageUrl, isSynced = 0 WHERE id = :noteId")
+    suspend fun updateNoteImageUrl(noteId: String, imageUrl: String)
     @Transaction
     suspend fun upsertRemoteNotes(remoteNotes: List<NoteEntity>, userId: String) {
         remoteNotes.forEach { remoteNote ->

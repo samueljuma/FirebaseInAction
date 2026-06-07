@@ -2,6 +2,10 @@
 
 package com.samueljuma.firebaseinaction.presentation.ui.createnotes
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
+import com.samueljuma.firebaseinaction.presentation.designsystem.components.NoteImageSection
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -51,15 +56,30 @@ fun CreateNoteScreenRoot(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { viewModel.onAction(CreateNoteAction.OnImageSelected(it)) }
+    }
+
+    // Intercept system back so cleanup always routes through the ViewModel.
+    // Disabled while an upload is in progress — back is blocked until the upload settles.
+    BackHandler(enabled = !state.isUploadingImage) {
+        viewModel.onAction(CreateNoteAction.OnBackClicked)
+    }
+
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             CreateNoteEvent.NavigateBack -> onNavigateBack()
             is CreateNoteEvent.ShowSnackbar -> {
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar(
-                        event.message.asString(context)
-                    )
+                    snackbarHostState.showSnackbar(event.message.asString(context))
                 }
+            }
+            CreateNoteEvent.LaunchImagePicker -> {
+                imagePickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
             }
         }
     }
@@ -102,7 +122,7 @@ private fun CreateNoteScreen(
                     } else {
                         TextButton(
                             onClick = { onAction(CreateNoteAction.OnSaveClicked) },
-                            enabled = state.title.isNotBlank()
+                            enabled = state.title.isNotBlank() && !state.isUploadingImage
                         ) {
                             Text("Save")
                         }
@@ -118,7 +138,15 @@ private fun CreateNoteScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            // Title field — borderless, large
+            NoteImageSection(
+                imageUrl = state.imageUrl,
+                isEditing = true,
+                isUploadingImage = state.isUploadingImage,
+                uploadProgress = state.uploadProgress,
+                onAddImageClicked = { onAction(CreateNoteAction.OnImageClicked) },
+                onRemoveImageClicked = { onAction(CreateNoteAction.OnRemoveImageClicked) }
+            )
+
             BasicTextField(
                 value = state.title,
                 onValueChange = { onAction(CreateNoteAction.OnTitleChanged(it)) },
@@ -136,8 +164,7 @@ private fun CreateNoteScreen(
                             Text(
                                 text = "Title",
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                                    .copy(alpha = 0.3f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -151,7 +178,6 @@ private fun CreateNoteScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Content field — fills remaining space
             BasicTextField(
                 value = state.content,
                 onValueChange = { onAction(CreateNoteAction.OnContentChanged(it)) },
@@ -167,8 +193,7 @@ private fun CreateNoteScreen(
                             Text(
                                 text = "Start writing...",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                                    .copy(alpha = 0.3f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                             )
                         }
                         innerTextField()

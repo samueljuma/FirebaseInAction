@@ -1,19 +1,21 @@
 package com.samueljuma.firebaseinaction.data.notes.workers
 
 import android.content.Context
+import androidx.core.net.toUri
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.samueljuma.firebaseinaction.domain.storage.StorageRepository
-import timber.log.Timber
-import androidx.core.net.toUri
 import androidx.work.workDataOf
 import com.samueljuma.firebaseinaction.core.utils.DataError
+import com.samueljuma.firebaseinaction.domain.notes.NoteRepository
+import com.samueljuma.firebaseinaction.domain.storage.StorageRepository
 import com.samueljuma.firebaseinaction.domain.storage.UploadState
+import timber.log.Timber
 
 class ImageUploadWorker(
     context: Context,
     params: WorkerParameters,
-    private val storageRepository: StorageRepository
+    private val storageRepository: StorageRepository,
+    private val noteRepository: NoteRepository
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -34,16 +36,17 @@ class ImageUploadWorker(
         ).collect { uploadState ->
             when (uploadState) {
                 is UploadState.Progress -> {
-                    setProgress(
-                        workDataOf(KEY_PROGRESS to uploadState.percentage)
-                    )
+                    setProgress(workDataOf(KEY_PROGRESS to uploadState.percentage))
                     Timber.tag(WORK_NAME).d("Upload progress: ${uploadState.percentage}%")
                 }
                 is UploadState.Success -> {
                     Timber.tag(WORK_NAME).d("Upload complete: ${uploadState.downloadUrl}")
-                    uploadResult = Result.success(
-                        workDataOf(KEY_DOWNLOAD_URL to uploadState.downloadUrl)
-                    )
+                    val updateResult = noteRepository.updateNoteImageUrl(noteId, uploadState.downloadUrl)
+                    uploadResult = if (updateResult is com.samueljuma.firebaseinaction.core.utils.Result.Success) {
+                        Result.success(workDataOf(KEY_DOWNLOAD_URL to uploadState.downloadUrl))
+                    } else {
+                        Result.retry()
+                    }
                 }
                 is UploadState.Error -> {
                     Timber.tag(WORK_NAME).e("Upload failed: ${uploadState.error}")
