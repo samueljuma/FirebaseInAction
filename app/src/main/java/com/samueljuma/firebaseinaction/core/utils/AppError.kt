@@ -14,6 +14,7 @@ sealed interface DataError : AppError {
         INVALID_EMAIL,
         INVALID_PASSWORD,
         CANCELLED,
+        NO_GOOGLE_ACCOUNT,
         GOOGLE_SIGN_IN_FAILED,
         NETWORK_ERROR,                // no internet during auth
         UNKNOWN,                       // safety net
@@ -41,5 +42,11 @@ sealed interface DataError : AppError {
     enum class Local : DataError {
         DISK_FULL,
         UNKNOWN
+    }
+
+    enum class Validation : DataError {
+        TITLE_EMPTY,
+        TITLE_TOO_LONG,
+        CONTENT_TOO_LONG
     }
 }

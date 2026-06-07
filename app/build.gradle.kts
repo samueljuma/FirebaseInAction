@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.firebase.perf)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -85,4 +86,12 @@ dependencies {
     implementation(libs.androidx.splash.screen)
 
     implementation(libs.bundles.lifecycle)
+
+    // Room
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    //Work Manager
+    implementation(libs.work.runtime.ktx)
 }

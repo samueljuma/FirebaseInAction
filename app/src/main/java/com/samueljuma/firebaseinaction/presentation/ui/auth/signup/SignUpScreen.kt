@@ -1,5 +1,7 @@
-package com.samueljuma.firebaseinaction.presentation.ui.auth
+package com.samueljuma.firebaseinaction.presentation.ui.auth.signup
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,61 +47,68 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.samueljuma.firebaseinaction.R
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.core.utils.showSnackbar
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import kotlinx.coroutines.launch
-import com.samueljuma.firebaseinaction.R
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun LoginScreenRot(
-    viewModel: AuthViewModel,
+fun SignUpScreenRoot(
+    viewModel: SignUpViewModel = koinViewModel(),
     onNavigateToHome: () -> Unit,
-    onNavigateToSignUp: () -> Unit
+    onNavigateToLogin: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    LoginScreen(
+
+    ObserveAsEvents(viewModel.events) { event ->
+        when (event) {
+            SignUpEvent.SignUpSuccess -> onNavigateToHome()
+            is SignUpEvent.ShowSnackbar -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar(event.message, context)
+                }
+            }
+            SignUpEvent.OpenGoogleAccountSettings -> {
+                val intent = Intent(Settings.ACTION_ADD_ACCOUNT).apply {
+                    putExtra(Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google"))
+                }
+                context.startActivity(intent)
+            }
+        }
+    }
+
+    SignUpScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onAction = { action ->
-            when(action){
-                AuthAction.OnGoToSignUp -> onNavigateToSignUp()
+            when (action) {
+                SignUpAction.OnGoToLogin -> onNavigateToLogin()
                 else -> Unit
             }
             viewModel.onAction(action)
         }
     )
-
-    ObserveAsEvents(viewModel.events) { event ->
-        when(event){
-            AuthEvent.Login.LoginSuccess -> onNavigateToHome()
-            is AuthEvent.Login.ShowSnackbar -> {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(event.message, context)
-                }
-            }
-            else -> Unit
-        }
-    }
 }
 
 @Composable
-private fun LoginScreen(
-    state: AuthState,
+private fun SignUpScreen(
+    state: SignUpState,
     snackbarHostState: SnackbarHostState,
-    onAction: (AuthAction) -> Unit
+    onAction: (SignUpAction) -> Unit
 ) {
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        content = {padding ->
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+        content = { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -108,25 +117,27 @@ private fun LoginScreen(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
-                    text = "Welcome Back",
+                    text = "Create Account",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Sign in to continue",
+                    text = "Start sharing your notes",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(36.dp))
 
                 OutlinedTextField(
                     value = state.email,
-                    onValueChange = { onAction(AuthAction.OnEmailChanged(it)) },
+                    onValueChange = { onAction(SignUpAction.OnEmailChanged(it)) },
                     label = { Text("Email") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -134,14 +145,14 @@ private fun LoginScreen(
                     ),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20)
+                    shape = RoundedCornerShape(10.dp)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = state.password,
-                    onValueChange = { onAction(AuthAction.OnPasswordChanged(it)) },
+                    onValueChange = { onAction(SignUpAction.OnPasswordChanged(it)) },
                     label = { Text("Password") },
                     visualTransformation = if (state.isPasswordVisible)
                         VisualTransformation.None
@@ -153,28 +164,31 @@ private fun LoginScreen(
                     ),
                     trailingIcon = {
                         IconButton(
-                            onClick = { onAction(AuthAction.OnTogglePasswordVisibility) }
+                            onClick = { onAction(SignUpAction.OnTogglePasswordVisibility) }
                         ) {
                             Icon(
                                 imageVector = if (state.isPasswordVisible)
-                                    Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (state.isPasswordVisible) "Hide password" else "Show password"
+                                    Icons.Default.VisibilityOff
+                                else
+                                    Icons.Default.Visibility,
+                                contentDescription = null
                             )
                         }
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20)
+                    shape = RoundedCornerShape(10.dp)
                 )
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = { onAction(AuthAction.OnSignInClicked) },
+                    onClick = { onAction(SignUpAction.OnSignUpClicked) },
                     enabled = !state.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
-                    shape = RoundedCornerShape(20)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     if (state.isLoading) {
                         CircularProgressIndicator(
@@ -183,7 +197,7 @@ private fun LoginScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Sign In")
+                        Text("Create Account")
                     }
                 }
 
@@ -204,7 +218,7 @@ private fun LoginScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedButton(
-                    onClick = { onAction(AuthAction.OnGoogleSignInClicked) },
+                    onClick = { onAction(SignUpAction.OnGoogleSignInClicked) },
                     enabled = !state.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -226,22 +240,22 @@ private fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(onClick = {onAction(AuthAction.OnGoToSignUp)}) {
-                    Text("Don't have an account? Sign Up",)
+                TextButton(onClick = { onAction(SignUpAction.OnGoToLogin) }) {
+                    Text("Already have an account? Sign In")
                 }
-
             }
         }
     )
 }
+
 @PreviewLightDark
 @Composable
-private fun LoginScreenPreview() {
-    AppTheme{
-       LoginScreen(
-           state = AuthState(),
-           snackbarHostState = remember { SnackbarHostState() },
-           onAction = {}
-       )
-   }
+private fun SignUpScreenPreview() {
+    AppTheme {
+        SignUpScreen(
+            state = SignUpState(),
+            snackbarHostState = remember { SnackbarHostState() },
+            onAction = {}
+        )
+    }
 }

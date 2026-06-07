@@ -32,7 +32,10 @@ class MainActivity : ComponentActivity() {
                 val state = viewModel.state
                 if(!state.isCheckingAuth){
                     Box(modifier = Modifier.fillMaxSize()) {
-                        AppNavHost(isLoggedIn = state.isLoggedIn)
+                        AppNavHost(
+                            isLoggedIn = state.isLoggedIn,
+                            isEmailVerified = state.isEmailVerified
+                        )
 
                         // Overlays on top of everything — non-dismissable
                         if (state.sessionExpired) {

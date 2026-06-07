@@ -9,7 +9,9 @@ import com.samueljuma.firebaseinaction.domain.auth.models.User
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 
@@ -59,8 +61,13 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun signOut(): Result<Unit, DataError.Auth> = firebaseAuthSafeCall {
-        firebaseAuth.signOut()
+        // Clear session BEFORE signing out of Firebase. firebaseAuth.signOut() fires
+        // the AuthStateListener synchronously, and observeTokenExpiry() uses the presence
+        // of a DataStore session to distinguish an explicit sign-out (session already gone)
+        // from an unexpected token expiry (session still present). Reversing the order
+        // would cause observeTokenExpiry() to incorrectly show the SessionExpiredDialog.
         sessionStorage.clear()
+        firebaseAuth.signOut()
     }
 
     override suspend fun signInWithGoogle(
@@ -72,4 +79,24 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         user
     }
+
+    override suspend fun sendEmailVerification(): Result<Unit, DataError.Auth> =
+        firebaseAuthSafeCall {
+            // firebaseAuth.currentUser can be transiently null while Firebase restores
+            // the session on startup or refreshes the ID token. Rather than reading the
+            // sync property directly, we attach an AuthStateListener and wait for the
+            // first non-null emission (fast path returns immediately if already set).
+            val firebaseUser = firebaseAuth.currentUser
+                ?: withTimeoutOrNull(5_000L) {
+                    callbackFlow {
+                        val listener = FirebaseAuth.AuthStateListener { auth ->
+                            auth.currentUser?.let { trySend(it) }
+                        }
+                        firebaseAuth.addAuthStateListener(listener)
+                        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+                    }.first()
+                }
+                ?: error("No current user")
+            firebaseUser.sendEmailVerification().await()
+        }
 }

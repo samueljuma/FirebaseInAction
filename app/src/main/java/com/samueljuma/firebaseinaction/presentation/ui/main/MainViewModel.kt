@@ -9,7 +9,6 @@ import com.samueljuma.firebaseinaction.domain.auth.usecases.ClearSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserSyncUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetCurrentUserUseCase
 import com.samueljuma.firebaseinaction.core.utils.DataError
-import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ReloadCurrentUserUseCase
@@ -41,7 +40,11 @@ class MainViewModel(
 
             state = when {
                 localSession != null && currentUser != null ->
-                    state.copy(isCheckingAuth = false, isLoggedIn = true)
+                    state.copy(
+                        isCheckingAuth = false,
+                        isLoggedIn = true,
+                        isEmailVerified = currentUser.isEmailVerified
+                    )
                 localSession != null && currentUser == null -> {
                     clearSessionUseCase()
                     state.copy(isCheckingAuth = false, isLoggedIn = false)
@@ -53,9 +56,12 @@ class MainViewModel(
             // Phase 2: Start observers — non-blocking
             observeTokenExpiry()
 
-            // Phase 3: Background server verification — only if locally logged in
-            // Does not block splash screen or initial navigation
-            if (state.isLoggedIn) {
+            // Phase 3: Background server verification — only for fully established sessions.
+            // Skipped for unverified users: EmailVerificationScreen's checkVerification()
+            // already calls reloadCurrentUser(), so they get server validation there.
+            // Running reload() concurrently with sendEmailVerification() in init causes a
+            // race where Firebase's token re-validation transiently clears currentUser.
+            if (state.isLoggedIn && state.isEmailVerified) {
                 verifySessionWithServer()
             }
         }
@@ -92,9 +98,21 @@ class MainViewModel(
             getCurrentUserUseCase().collect { user ->
                 Timber.tag(TAG).d("Auth state emission — user: ${user?.uid ?: "null"}")
                 if (user == null && state.isLoggedIn) {
-                    Timber.tag(TAG).w("Session expired — clearing")
-                    clearSessionUseCase()
-                    state = state.copy(sessionExpired = true)
+                    // Check whether a session still exists in DataStore to distinguish:
+                    //   - Explicit sign-out: signOut() clears DataStore before calling
+                    //     firebaseAuth.signOut(), so the session is already gone here.
+                    //     Just update isLoggedIn — no dialog.
+                    //   - Unexpected expiry / account deleted: the session is still in
+                    //     DataStore because nobody cleared it. Clear it and show the dialog.
+                    val sessionExists = getSessionUseCase() != null
+                    if (sessionExists) {
+                        Timber.tag(TAG).w("Session expired unexpectedly — clearing")
+                        clearSessionUseCase()
+                        state = state.copy(sessionExpired = true)
+                    } else {
+                        Timber.tag(TAG).d("Explicit sign-out detected — no dialog")
+                        state = state.copy(isLoggedIn = false)
+                    }
                 }
             }
         }
