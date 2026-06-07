@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
+import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.domain.notes.DeleteNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.GetNoteByIdUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
@@ -13,6 +14,7 @@ import com.samueljuma.firebaseinaction.domain.notes.model.Note
 import com.samueljuma.firebaseinaction.domain.storage.UploadState
 import com.samueljuma.firebaseinaction.domain.storage.usecases.DeleteNoteImageUseCase
 import com.samueljuma.firebaseinaction.domain.storage.usecases.UploadNoteImageUseCase
+import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -25,7 +27,8 @@ class NoteDetailViewModel(
     private val updateNoteUseCase: UpdateNoteUseCase,
     private val deleteNoteUseCase: DeleteNoteUseCase,
     private val uploadNoteImageUseCase: UploadNoteImageUseCase,
-    private val deleteNoteImageUseCase: DeleteNoteImageUseCase
+    private val deleteNoteImageUseCase: DeleteNoteImageUseCase,
+    private val syncScheduler: SyncScheduler
 ) : MviViewModel<NoteDetailState, NoteDetailAction, NoteDetailEvent>(
     NoteDetailState()
 ) {
@@ -153,6 +156,9 @@ class NoteDetailViewModel(
                                     uploadState.error.toUiText()
                                 )
                             )
+                            if (uploadState.error == DataError.Storage.NETWORK_ERROR) {
+                                syncScheduler.scheduleImageUpload(noteId, uri.toString())
+                            }
                             updateState {
                                 copy(isUploadingImage = false, uploadProgress = null)
                             }

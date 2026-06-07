@@ -14,6 +14,7 @@ import com.samueljuma.firebaseinaction.domain.notes.GetNotesUseCase
 import com.samueljuma.firebaseinaction.domain.notes.StartRemoteSyncUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.model.Note
+import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -27,7 +28,8 @@ class HomeViewModel(
     private val updateNoteUseCase: UpdateNoteUseCase,
     private val signOutUseCase: SignOutUseCase,
     private val startRemoteSyncUseCase: StartRemoteSyncUseCase,
-    private val getCurrentUserSyncUseCase: GetCurrentUserSyncUseCase
+    private val getCurrentUserSyncUseCase: GetCurrentUserSyncUseCase,
+    private val syncScheduler: SyncScheduler
 ) : MviViewModel<HomeState, HomeAction, HomeEvent>(HomeState()) {
 
     init {
@@ -82,7 +84,10 @@ class HomeViewModel(
     private fun signOut() {
         viewModelScope.launch {
             signOutUseCase()
-                .onSuccess { emitEvent(HomeEvent.NavigateToLogin) }
+                .onSuccess {
+                    syncScheduler.cancelAllSyncs()
+                    emitEvent(HomeEvent.NavigateToLogin)
+                }
                 .onError { error ->
                     emitEvent(HomeEvent.ShowSnackbar(error.toUiText()))
                 }

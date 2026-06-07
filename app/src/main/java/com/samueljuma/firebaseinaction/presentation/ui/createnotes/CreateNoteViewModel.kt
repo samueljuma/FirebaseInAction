@@ -7,10 +7,12 @@ import com.samueljuma.firebaseinaction.core.utils.UiText
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
+import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.domain.notes.CreateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.storage.UploadState
 import com.samueljuma.firebaseinaction.domain.storage.usecases.DeleteImageOnlyUseCase
 import com.samueljuma.firebaseinaction.domain.storage.usecases.UploadImageOnlyUseCase
+import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
 import com.samueljuma.firebaseinaction.domain.util.IdGenerator
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.launch
@@ -20,7 +22,8 @@ class CreateNoteViewModel(
     private val createNoteUseCase: CreateNoteUseCase,
     private val uploadImageOnlyUseCase: UploadImageOnlyUseCase,
     private val deleteImageOnlyUseCase: DeleteImageOnlyUseCase,
-    private val idGenerator: IdGenerator
+    private val idGenerator: IdGenerator,
+    private val syncScheduler: SyncScheduler
 ) : MviViewModel<CreateNoteState, CreateNoteAction, CreateNoteEvent>(CreateNoteState()) {
 
     private val pendingNoteId: String = idGenerator.generate()
@@ -73,6 +76,9 @@ class CreateNoteViewModel(
                         }
                     is UploadState.Error -> {
                         emitEvent(CreateNoteEvent.ShowSnackbar(uploadState.error.toUiText()))
+                        if (uploadState.error == DataError.Storage.NETWORK_ERROR) {
+                            syncScheduler.scheduleImageUpload(pendingNoteId, uri.toString())
+                        }
                         updateState { copy(isUploadingImage = false, uploadProgress = null) }
                     }
                 }
