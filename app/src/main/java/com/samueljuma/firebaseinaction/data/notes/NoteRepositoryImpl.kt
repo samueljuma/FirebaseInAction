@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.firestoreSafeCall
 import com.samueljuma.firebaseinaction.data.notes.remote.NoteDto
+import com.samueljuma.firebaseinaction.data.notes.workers.NoteSyncWorker
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toDto
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toEntity

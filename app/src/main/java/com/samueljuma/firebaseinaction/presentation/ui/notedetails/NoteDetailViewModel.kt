@@ -1,5 +1,6 @@
 package com.samueljuma.firebaseinaction.presentation.ui.notedetails
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.samueljuma.firebaseinaction.core.utils.onError
@@ -9,6 +10,9 @@ import com.samueljuma.firebaseinaction.domain.notes.DeleteNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.GetNoteByIdUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.model.Note
+import com.samueljuma.firebaseinaction.domain.storage.UploadState
+import com.samueljuma.firebaseinaction.domain.storage.usecases.DeleteNoteImageUseCase
+import com.samueljuma.firebaseinaction.domain.storage.usecases.UploadNoteImageUseCase
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -19,7 +23,9 @@ class NoteDetailViewModel(
     savedStateHandle: SavedStateHandle,
     private val getNoteByIdUseCase: GetNoteByIdUseCase,
     private val updateNoteUseCase: UpdateNoteUseCase,
-    private val deleteNoteUseCase: DeleteNoteUseCase
+    private val deleteNoteUseCase: DeleteNoteUseCase,
+    private val uploadNoteImageUseCase: UploadNoteImageUseCase,
+    private val deleteNoteImageUseCase: DeleteNoteImageUseCase
 ) : MviViewModel<NoteDetailState, NoteDetailAction, NoteDetailEvent>(
     NoteDetailState()
 ) {
@@ -65,6 +71,9 @@ class NoteDetailViewModel(
                 updateState { copy(title = action.title) }
             is NoteDetailAction.OnContentChanged ->
                 updateState { copy(content = action.content) }
+            NoteDetailAction.OnImageClicked ->  emitEvent(NoteDetailEvent.LaunchImagePicker)
+            is NoteDetailAction.OnImageSelected -> uploadImage(action.uri)
+            NoteDetailAction.OnRemoveImageClicked -> removeImage()
         }
     }
 
@@ -115,5 +124,52 @@ class NoteDetailViewModel(
         isPinned = isPinned,
         isSynced = false
     )
+
+    private fun uploadImage(uri: Uri) {
+        viewModelScope.launch {
+            val note = buildNoteFromState()
+            updateState { copy(isUploadingImage = true, uploadProgress = 0) }
+
+            uploadNoteImageUseCase(note, uri)
+                .collect { uploadState ->
+                    when (uploadState) {
+                        is UploadState.Progress -> {
+                            updateState { copy(uploadProgress = uploadState.percentage) }
+                        }
+                        is UploadState.Success -> {
+                            updateState {
+                                copy(
+                                    imageUrl = uploadState.downloadUrl,
+                                    isUploadingImage = false,
+                                    uploadProgress = null
+                                )
+                            }
+                        }
+                        is UploadState.Error -> {
+                            emitEvent(
+                                NoteDetailEvent.ShowSnackbar(
+                                    uploadState.error.toUiText()
+                                )
+                            )
+                            updateState {
+                                copy(isUploadingImage = false, uploadProgress = null)
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun removeImage() {
+        viewModelScope.launch {
+            deleteNoteImageUseCase(buildNoteFromState())
+                .onSuccess {
+                    updateState { copy(imageUrl = null) }
+                }
+                .onError { error ->
+                    emitEvent(NoteDetailEvent.ShowSnackbar(error.toUiText()))
+                }
+        }
+    }
 
 }

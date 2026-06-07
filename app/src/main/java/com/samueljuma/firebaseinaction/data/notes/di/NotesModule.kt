@@ -3,7 +3,7 @@ package com.samueljuma.firebaseinaction.data.notes.di
 import androidx.work.WorkManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.samueljuma.firebaseinaction.data.notes.NoteRepositoryImpl
-import com.samueljuma.firebaseinaction.data.notes.NoteSyncWorker
+import com.samueljuma.firebaseinaction.data.notes.workers.NoteSyncWorker
 import com.samueljuma.firebaseinaction.data.util.FirestoreIdGenerator
 import com.samueljuma.firebaseinaction.domain.notes.CreateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.DeleteNoteUseCase

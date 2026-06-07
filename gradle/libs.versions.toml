@@ -21,6 +21,8 @@ splashScreen = "1.2.0"
 room = "2.8.4"
 ksp = "2.3.7"
 workManager = "2.10.1"
+coil = "2.7.0"
+
 
 
 [libraries]
@@ -86,6 +88,9 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 
 #Work Manager
 work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
+
+# Coil for Image loading
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 
 [plugins]

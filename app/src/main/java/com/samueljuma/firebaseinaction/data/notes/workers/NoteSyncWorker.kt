@@ -1,4 +1,4 @@
-package com.samueljuma.firebaseinaction.data.notes
+package com.samueljuma.firebaseinaction.data.notes.workers
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -18,18 +18,18 @@ class NoteSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        Timber.tag("NoteSyncWorker").d("Worker started")
+        Timber.Forest.tag("NoteSyncWorker").d("Worker started")
         val session = getSessionUseCase()
             ?: return Result.failure() // No session — nothing to sync
 
-        Timber.tag(WORK_NAME).d("Starting note sync for user: ${session.uid}")
+        Timber.Forest.tag(WORK_NAME).d("Starting note sync for user: ${session.uid}")
 
         return noteRepository.syncNotes()
             .onSuccess {
-                Timber.tag(WORK_NAME).d("Note sync completed successfully")
+                Timber.Forest.tag(WORK_NAME).d("Note sync completed successfully")
             }
             .onError { error ->
-                Timber.tag(WORK_NAME).e("Note sync failed: $error")
+                Timber.Forest.tag(WORK_NAME).e("Note sync failed: $error")
             }
             .let { result ->
                 when (result) {

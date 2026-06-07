@@ -7,5 +7,6 @@ data class NoteDto(
     val content: String = "",
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val imageUrl: String? = null
 )

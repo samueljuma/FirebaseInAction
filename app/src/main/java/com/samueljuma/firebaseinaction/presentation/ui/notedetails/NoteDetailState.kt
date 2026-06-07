@@ -11,5 +11,8 @@ data class NoteDetailState(
     val isSaving: Boolean = false,
     val isEditing: Boolean = false,
     val createdAt: Long = 0L,
-    val lastUpdated: Long = 0L
+    val lastUpdated: Long = 0L,
+    val imageUrl: String? = null,
+    val uploadProgress: Int? = null,  // null = not uploading, 0-100 = progress
+    val isUploadingImage: Boolean = false
 )

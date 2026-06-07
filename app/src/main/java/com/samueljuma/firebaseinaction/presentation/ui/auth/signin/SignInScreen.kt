@@ -3,6 +3,7 @@ package com.samueljuma.firebaseinaction.presentation.ui.auth.signin
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -112,10 +113,11 @@ private fun SignInScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                Image(
+                    modifier = Modifier
+                        .size(60.dp),
+                    painter = painterResource(R.drawable.ic_notey),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

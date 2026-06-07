@@ -8,5 +8,6 @@ data class Note(
     val createdAt: Long,
     val updatedAt: Long,
     val isPinned: Boolean,
-    val isSynced: Boolean
+    val isSynced: Boolean,
+    val imageUrl: String? = null
 )
