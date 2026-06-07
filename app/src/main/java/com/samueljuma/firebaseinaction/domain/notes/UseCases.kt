@@ -4,7 +4,9 @@ import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.domain.notes.model.Note
 import kotlinx.coroutines.flow.Flow
 import com.samueljuma.firebaseinaction.core.utils.Result
+import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.notes.validator.NoteValidator
 import com.samueljuma.firebaseinaction.domain.util.IdGenerator
 
 class GetNotesUseCase(private val repository: NoteRepository) {
@@ -21,9 +23,16 @@ class DeleteNoteUseCase(private val repository: NoteRepository) {
         repository.deleteNote(noteId)
 }
 
-class UpdateNoteUseCase(private val repository: NoteRepository) {
-    suspend operator fun invoke(note: Note): Result<Unit, DataError> =
-        repository.updateNote(note)
+class UpdateNoteUseCase(
+    private val repository: NoteRepository,
+    private val noteValidator: NoteValidator
+) {
+    suspend operator fun invoke(note: Note): Result<Unit, DataError> {
+        noteValidator.validate(note.title, note.content)
+            .onError { return Result.Error(it) }
+        return repository.updateNote(note)
+    }
+
 }
 
 class StartRemoteSyncUseCase(private val repository: NoteRepository) {
@@ -33,12 +42,17 @@ class StartRemoteSyncUseCase(private val repository: NoteRepository) {
 class CreateNoteUseCase(
     private val repository: NoteRepository,
     private val idGenerator: IdGenerator,
-    private val sessionStorage: SessionStorage
+    private val sessionStorage: SessionStorage,
+    private val noteValidator: NoteValidator
 ) {
     suspend operator fun invoke(
         title: String,
         content: String
     ): Result<Unit, DataError> {
+
+        noteValidator.validate(title, content)
+            .onError { return Result.Error(it) }
+
         val userId = sessionStorage.get()?.uid
             ?: return Result.Error(DataError.Auth.UNKNOWN)
 

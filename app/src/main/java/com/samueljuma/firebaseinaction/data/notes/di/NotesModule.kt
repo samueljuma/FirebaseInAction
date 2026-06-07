@@ -12,6 +12,7 @@ import com.samueljuma.firebaseinaction.domain.notes.GetNotesUseCase
 import com.samueljuma.firebaseinaction.domain.notes.NoteRepository
 import com.samueljuma.firebaseinaction.domain.notes.StartRemoteSyncUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
+import com.samueljuma.firebaseinaction.domain.notes.validator.NoteValidator
 import com.samueljuma.firebaseinaction.domain.util.IdGenerator
 import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteViewModel
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeViewModel
@@ -30,6 +31,7 @@ val notesModule = module {
 
     singleOf(::NoteRepositoryImpl).bind<NoteRepository>()
     singleOf(::FirestoreIdGenerator).bind<IdGenerator>()
+    singleOf(::NoteValidator)
 
     factoryOf(::GetNotesUseCase)
     factoryOf(::GetNoteByIdUseCase)

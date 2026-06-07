@@ -43,4 +43,10 @@ sealed interface DataError : AppError {
         DISK_FULL,
         UNKNOWN
     }
+
+    enum class Validation : DataError {
+        TITLE_EMPTY,
+        TITLE_TOO_LONG,
+        CONTENT_TOO_LONG
+    }
 }

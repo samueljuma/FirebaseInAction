@@ -20,4 +20,6 @@
     <string name="error_object_not_found">File not found</string>
     <string name="error_file_too_large">File is too large to upload</string>
     <string name="error_title_empty">Title is empty!</string>
+    <string name="error_title_too_long">Title must be under 500 characters</string>
+    <string name="error_content_too_long">Note content must be under 50,000 characters</string>
 </resources>

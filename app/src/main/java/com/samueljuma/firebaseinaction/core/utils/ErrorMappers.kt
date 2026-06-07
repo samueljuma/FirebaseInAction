@@ -9,6 +9,7 @@ fun DataError.toUiText(): UiText = when (this) {
     is DataError.Firestore -> this.toUiText()
     is DataError.Local -> this.toUiText()
     is DataError.Storage -> this.toUiText()
+    is DataError.Validation -> this.toUiText()
 }
 
 fun DataError.Auth.toUiText(): UiText = when (this) {
@@ -77,4 +78,13 @@ fun DataError.Storage.toUiText(): UiText = when (this) {
         UiText.StringResource(R.string.error_file_too_large)
     DataError.Storage.UNKNOWN ->
         UiText.StringResource(R.string.error_unknown)
+}
+
+fun DataError.Validation.toUiText(): UiText = when (this) {
+    DataError.Validation.TITLE_EMPTY ->
+        UiText.StringResource(R.string.error_title_empty)
+    DataError.Validation.TITLE_TOO_LONG ->
+        UiText.StringResource(R.string.error_title_too_long)
+    DataError.Validation.CONTENT_TOO_LONG ->
+        UiText.StringResource(R.string.error_content_too_long)
 }
