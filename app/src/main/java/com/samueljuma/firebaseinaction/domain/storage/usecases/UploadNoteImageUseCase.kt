@@ -12,8 +12,7 @@ import kotlinx.coroutines.flow.flow
 
 class UploadNoteImageUseCase(
     private val storageRepository: StorageRepository,
-    private val noteRepository: NoteRepository,
-    private val sessionStorage: SessionStorage
+    private val noteRepository: NoteRepository
 ) {
     operator fun invoke(
         note: Note,
@@ -32,7 +31,7 @@ class UploadNoteImageUseCase(
                     note.copy(
                         imageUrl = uploadState.downloadUrl,
                         updatedAt = System.currentTimeMillis(),
-                        isSynced = false
+                        synced = false
                     )
                 )
             }

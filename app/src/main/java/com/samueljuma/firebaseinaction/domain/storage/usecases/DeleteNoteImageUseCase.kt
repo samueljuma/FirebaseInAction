@@ -21,7 +21,7 @@ class DeleteNoteImageUseCase(
             note.copy(
                 imageUrl = null,
                 updatedAt = System.currentTimeMillis(),
-                isSynced = false
+                synced = false
             )
         )
     }

@@ -64,7 +64,7 @@ class HomeViewModel(
         startRemoteSyncUseCase()
             .onEach { }
             .catch { e ->
-                Timber.tag("HomeViewModel").e(e, "Remote sync error")
+                Timber.tag(TAG).e(e, "Remote sync error")
             }
             .launchIn(viewModelScope)
     }
@@ -105,10 +105,14 @@ class HomeViewModel(
 
     private fun pinNote(note: Note) {
         viewModelScope.launch {
-            updateNoteUseCase(note.copy(isPinned = !note.isPinned))
+            updateNoteUseCase(note.copy(pinned = !note.pinned))
                 .onError { error ->
                     emitEvent(HomeEvent.ShowSnackbar(error.toUiText()))
                 }
         }
+    }
+
+    companion object {
+        const val TAG = "HomeViewModel"
     }
 }

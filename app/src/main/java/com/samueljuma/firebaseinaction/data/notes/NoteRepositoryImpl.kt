@@ -15,7 +15,6 @@ import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toDto
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toEntity
 import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -56,7 +55,7 @@ class NoteRepositoryImpl(
 
     override suspend fun createNote(note: Note): Result<Unit, DataError> {
         return try {
-            noteDao.upsertNote(note.toEntity().copy(isSynced = false))
+            noteDao.upsertNote(note.toEntity().copy(synced = false))
             syncScheduler.scheduleNotesSync()
             Result.Success(Unit)
         } catch (e: CancellationException) {
@@ -69,11 +68,13 @@ class NoteRepositoryImpl(
 
     override suspend fun updateNote(note: Note): Result<Unit, DataError> {
         return try {
-            noteDao.upsertNote(
-                note.toEntity().copy(
-                    updatedAt = System.currentTimeMillis(),
-                    isSynced = false
-                )
+            noteDao.updateNoteFields(
+                noteId    = note.id,
+                title     = note.title,
+                content   = note.content,
+                pinned    = note.pinned,
+                updatedAt = System.currentTimeMillis(),
+                imageUrl  = note.imageUrl
             )
             syncScheduler.scheduleNotesSync()
             Result.Success(Unit)
@@ -155,7 +156,7 @@ class NoteRepositoryImpl(
                             return@addSnapshotListener
                         }
                         snapshot?.documents?.let { documents ->
-                            CoroutineScope(Dispatchers.IO).launch {
+                            launch(Dispatchers.IO) {
                                 val entities = documents.mapNotNull { doc ->
                                     doc.toObject(NoteDto::class.java)?.toEntity()
                                 }

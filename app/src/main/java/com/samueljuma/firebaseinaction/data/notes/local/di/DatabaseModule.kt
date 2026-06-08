@@ -13,16 +13,7 @@ val dataBaseModule = module {
             klass = AppDatabase::class.java,
             name = "firebaseinaction.db"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .build()
     }
-//    single {
-//        Room.databaseBuilder(
-//            context = androidContext(),
-//            klass = AppDatabase::class.java,
-//            name = "firebaseinaction.db"
-//        )
-//            .fallbackToDestructiveMigration(dropAllTables = true) // dev only
-//            .build()
-//    }
 }

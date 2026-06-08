@@ -10,13 +10,13 @@ import timber.log.Timber
 @Dao
 interface NoteDao {
 
-    @Query("SELECT * FROM notes WHERE userId = :userId AND isDeleted = 0 ORDER BY isPinned DESC, updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE userId = :userId AND isDeleted = 0 ORDER BY pinned DESC, updatedAt DESC")
     fun getNotes(userId: String): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :noteId LIMIT 1")
     fun getNoteById(noteId: String): Flow<NoteEntity?>
 
-    @Query("SELECT * FROM notes WHERE userId = :userId AND isSynced = 0")
+    @Query("SELECT * FROM notes WHERE userId = :userId AND synced = 0")
     suspend fun getUnsyncedNotes(userId: String): List<NoteEntity>
 
     @Query("SELECT * FROM notes WHERE userId = :userId")
@@ -34,14 +34,34 @@ interface NoteDao {
     @Query("DELETE FROM notes WHERE id = :noteId")
     suspend fun hardDeleteNote(noteId: String)
 
-    @Query("UPDATE notes SET isDeleted = 1, isSynced = 0 WHERE id = :noteId")
+    @Query("UPDATE notes SET isDeleted = 1, synced = 0 WHERE id = :noteId")
     suspend fun softDeleteNote(noteId: String)
 
-    @Query("UPDATE notes SET isSynced = 1 WHERE id = :noteId")
+    @Query("UPDATE notes SET synced = 1 WHERE id = :noteId")
     suspend fun markAsSynced(noteId: String)
 
-    @Query("UPDATE notes SET imageUrl = :imageUrl, isSynced = 0 WHERE id = :noteId")
+    @Query("UPDATE notes SET imageUrl = :imageUrl, synced = 0 WHERE id = :noteId")
     suspend fun updateNoteImageUrl(noteId: String, imageUrl: String)
+
+    @Query("""
+        UPDATE notes SET
+            title    = :title,
+            content  = :content,
+            pinned   = :pinned,
+            updatedAt = :updatedAt,
+            synced   = 0,
+            imageUrl = :imageUrl
+        WHERE id = :noteId
+    """)
+    suspend fun updateNoteFields(
+        noteId: String,
+        title: String,
+        content: String,
+        pinned: Boolean,
+        updatedAt: Long,
+        imageUrl: String?
+    )
+
     @Transaction
     suspend fun upsertRemoteNotes(remoteNotes: List<NoteEntity>, userId: String) {
         remoteNotes.forEach { remoteNote ->
@@ -53,7 +73,7 @@ interface NoteDao {
                     Timber.tag("NoteDao").d("Skipping re-insert of deleted note: ${remoteNote.id}")
                 }
                 // Note has unsynced local changes — don't overwrite
-                localNote?.isSynced == false -> {
+                localNote?.synced == false -> {
                     Timber.tag("NoteDao").d("Skipping remote update for unsynced note: ${remoteNote.id}")
                 }
                 // Safe to apply remote version
@@ -61,6 +81,7 @@ interface NoteDao {
             }
         }
     }
+
     @Query("SELECT * FROM notes WHERE id = :noteId LIMIT 1")
     suspend fun getNoteByIdSync(noteId: String): NoteEntity?
 }

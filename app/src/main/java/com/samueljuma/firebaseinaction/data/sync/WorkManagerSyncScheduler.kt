@@ -32,7 +32,7 @@ class WorkManagerSyncScheduler(
             .build()
         workManager.enqueueUniqueWork(
             NoteSyncWorker.WORK_NAME,
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            ExistingWorkPolicy.KEEP,
             request
         )
     }

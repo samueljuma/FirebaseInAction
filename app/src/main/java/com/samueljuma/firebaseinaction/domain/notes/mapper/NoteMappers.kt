@@ -12,8 +12,8 @@ fun NoteEntity.toNote() = Note(
     content = content,
     createdAt = createdAt,
     updatedAt = updatedAt,
-    isPinned = isPinned,
-    isSynced = isSynced,
+    pinned = pinned,
+    synced = synced,
     imageUrl = imageUrl
 )
 
@@ -25,8 +25,8 @@ fun Note.toEntity() = NoteEntity(
     content = content,
     createdAt = createdAt,
     updatedAt = updatedAt,
-    isPinned = isPinned,
-    isSynced = isSynced,
+    pinned = pinned,
+    synced = synced,
     imageUrl = imageUrl
 )
 
@@ -38,8 +38,8 @@ fun NoteDto.toEntity() = NoteEntity(
     content = content,
     createdAt = createdAt,
     updatedAt = updatedAt,
-    isPinned = isPinned,
-    isSynced = true,
+    pinned = pinned,
+    synced = true,
     imageUrl = imageUrl
 )
 
@@ -51,6 +51,6 @@ fun NoteEntity.toDto() = NoteDto(
     content = content,
     createdAt = createdAt,
     updatedAt = updatedAt,
-    isPinned = isPinned,
+    pinned = pinned,
     imageUrl = imageUrl
 )

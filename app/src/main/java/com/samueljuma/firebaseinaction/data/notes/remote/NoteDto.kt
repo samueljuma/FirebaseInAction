@@ -7,6 +7,8 @@ data class NoteDto(
     val content: String = "",
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
-    val isPinned: Boolean = false,
+    // Firebase JavaBeans convention strips "is" from isXxx() getters, storing "pinned" not "isPinned".
+    // Using "pinned" aligns write and read field names so round-trips work correctly.
+    val pinned: Boolean = false,
     val imageUrl: String? = null
 )

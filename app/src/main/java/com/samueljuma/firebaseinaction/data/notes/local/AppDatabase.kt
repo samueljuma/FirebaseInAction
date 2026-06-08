@@ -8,7 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 // AppDatabase
 @Database(
     entities = [NoteEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +26,33 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE notes ADD COLUMN imageUrl TEXT DEFAULT NULL"
                 )
+            }
+        }
+        // Renames isPinned → pinned and isSynced → synced.
+        // RENAME COLUMN requires SQLite 3.25 (API 30+), so we recreate the table instead.
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE notes_new (
+                        id        TEXT NOT NULL PRIMARY KEY,
+                        userId    TEXT NOT NULL,
+                        title     TEXT NOT NULL,
+                        content   TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        pinned    INTEGER NOT NULL DEFAULT 0,
+                        synced    INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0,
+                        imageUrl  TEXT
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO notes_new (id, userId, title, content, createdAt, updatedAt, pinned, synced, isDeleted, imageUrl)
+                    SELECT id, userId, title, content, createdAt, updatedAt, isPinned, isSynced, isDeleted, imageUrl
+                    FROM notes
+                """.trimIndent())
+                db.execSQL("DROP TABLE notes")
+                db.execSQL("ALTER TABLE notes_new RENAME TO notes")
             }
         }
     }

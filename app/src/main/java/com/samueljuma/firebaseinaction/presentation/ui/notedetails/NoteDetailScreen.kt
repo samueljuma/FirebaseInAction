@@ -138,7 +138,7 @@ private fun NoteDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (!state.isSynced) {
+                        if (!state.synced) {
                             Icon(
                                 imageVector = Icons.Default.CloudOff,
                                 contentDescription = "Not synced",
@@ -169,13 +169,13 @@ private fun NoteDetailScreen(
                         onClick = { onAction(NoteDetailAction.OnPinClicked) }
                     ) {
                         Icon(
-                            imageVector = if (state.isPinned)
+                            imageVector = if (state.pinned)
                                 Icons.Default.PushPin
                             else
                                 Icons.Outlined.PushPin,
-                            contentDescription = if (state.isPinned)
+                            contentDescription = if (state.pinned)
                                 "Unpin" else "Pin",
-                            tint = if (state.isPinned)
+                            tint = if (state.pinned)
                                 MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant

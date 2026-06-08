@@ -7,7 +7,7 @@ data class Note(
     val content: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val isPinned: Boolean,
-    val isSynced: Boolean,
+    val pinned: Boolean,
+    val synced: Boolean,
     val imageUrl: String? = null
 )

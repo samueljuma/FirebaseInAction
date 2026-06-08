@@ -63,8 +63,8 @@ class CreateNoteUseCase(
             content = content,
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis(),
-            isPinned = false,
-            isSynced = false,
+            pinned = false,
+            synced = false,
             imageUrl = imageUrl
         )
 

@@ -12,8 +12,8 @@ data class NoteEntity(
     val content: String,
     val createdAt: Long,
     val updatedAt: Long,
-    val isPinned: Boolean = false,
-    val isSynced: Boolean = false,
+    val pinned: Boolean = false,
+    val synced: Boolean = false,
     val isDeleted: Boolean = false,
     val imageUrl: String? = null
 )

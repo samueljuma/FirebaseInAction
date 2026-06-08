@@ -203,8 +203,8 @@ private fun NotesList(
     onAction: (HomeAction) -> Unit
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(
             items = notes,
@@ -231,15 +231,15 @@ private fun NoteCard(
         onClick = onNoteClicked,
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (note.isPinned) 4.dp else 1.dp
+            defaultElevation = if (note.pinned) 4.dp else 1.dp
         ),
-        border = if (note.isPinned)
+        border = if (note.pinned)
             BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
         else null
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -256,7 +256,7 @@ private fun NoteCard(
                 )
                 Row {
                     // Sync indicator
-                    if (!note.isSynced) {
+                    if (!note.synced) {
                         Icon(
                             imageVector = Icons.Default.CloudOff,
                             contentDescription = "Not synced",
@@ -271,16 +271,16 @@ private fun NoteCard(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            imageVector = if (note.isPinned)
+                            imageVector = if (note.pinned)
                                 Icons.Default.PushPin
                             else
                                 Icons.Outlined.PushPin,
-                            contentDescription = if (note.isPinned)
+                            contentDescription = if (note.pinned)
                                 "Unpin note"
                             else
                                 "Pin note",
                             modifier = Modifier.size(16.dp),
-                            tint = if (note.isPinned)
+                            tint = if (note.pinned)
                                 MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -322,7 +322,7 @@ private fun NoteCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                         .copy(alpha = 0.7f)
                 )
-                if (note.isPinned) {
+                if (note.pinned) {
                     Text(
                         text = "Pinned",
                         style = MaterialTheme.typography.labelSmall,
@@ -349,8 +349,8 @@ private fun HomeScreenPreview() {
                         content = "Discuss Q3 roadmap with the team",
                         createdAt = System.currentTimeMillis(),
                         updatedAt = System.currentTimeMillis(),
-                        isPinned = true,
-                        isSynced = true
+                        pinned = true,
+                        synced = true
                     ),
                     Note(
                         id = "2",
@@ -359,8 +359,8 @@ private fun HomeScreenPreview() {
                         content = "Milk, eggs, bread",
                         createdAt = System.currentTimeMillis(),
                         updatedAt = System.currentTimeMillis(),
-                        isPinned = false,
-                        isSynced = false
+                        pinned = false,
+                        synced = false
                     )
                 )
             ),

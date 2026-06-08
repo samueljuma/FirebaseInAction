@@ -52,8 +52,8 @@ class NoteDetailViewModel(
                             userId = note.userId,
                             title = note.title,
                             content = note.content,
-                            isPinned = note.isPinned,
-                            isSynced = note.isSynced,
+                            pinned = note.pinned,
+                            synced = note.synced,
                             isLoading = false,
                             createdAt = note.createdAt,
                             lastUpdated = note.updatedAt,
@@ -119,7 +119,7 @@ class NoteDetailViewModel(
 
     private fun pinNote() {
         viewModelScope.launch {
-            updateNoteUseCase(buildNoteFromState(isPinned = !state.value.isPinned))
+            updateNoteUseCase(buildNoteFromState(pinned = !state.value.pinned))
                 .onError { error ->
                     emitEvent(NoteDetailEvent.ShowSnackbar(error.toUiText()))
                 }
@@ -128,7 +128,7 @@ class NoteDetailViewModel(
 
     // Builds a Note from current state with overrides
     private fun buildNoteFromState(
-        isPinned: Boolean = state.value.isPinned,
+        pinned: Boolean = state.value.pinned,
         title: String = state.value.title,
         content: String = state.value.content
     ): Note = Note(
@@ -138,8 +138,8 @@ class NoteDetailViewModel(
         content = content.trim(),
         createdAt = state.value.createdAt,
         updatedAt = System.currentTimeMillis(),
-        isPinned = isPinned,
-        isSynced = false,
+        pinned = pinned,
+        synced = false,
         imageUrl = state.value.imageUrl
     )
 
