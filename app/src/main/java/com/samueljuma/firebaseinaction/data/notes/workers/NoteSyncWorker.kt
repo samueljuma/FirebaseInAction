@@ -1,4 +1,4 @@
-package com.samueljuma.firebaseinaction.data.notes
+package com.samueljuma.firebaseinaction.data.notes.workers
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
+import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.notes.NoteRepository
 import timber.log.Timber
@@ -14,15 +15,15 @@ class NoteSyncWorker(
     context: Context,
     params: WorkerParameters,
     private val noteRepository: NoteRepository,
-    private val getSessionUseCase: GetSessionUseCase
+    private val sessionStorage: SessionStorage
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         Timber.tag("NoteSyncWorker").d("Worker started")
-        val session = getSessionUseCase()
-            ?: return Result.failure() // No session — nothing to sync
+        val uid = sessionStorage.get()?.uid
+            ?: return Result.failure()
 
-        Timber.tag(WORK_NAME).d("Starting note sync for user: ${session.uid}")
+        Timber.tag(WORK_NAME).d("Starting note sync for user: ${uid}")
 
         return noteRepository.syncNotes()
             .onSuccess {

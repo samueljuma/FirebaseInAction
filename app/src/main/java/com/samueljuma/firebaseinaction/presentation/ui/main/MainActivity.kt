@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.samueljuma.firebaseinaction.core.navigation.AppNavHost
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
-import com.samueljuma.firebaseinaction.presentation.designsystem.components.SessionExpiredDialog
+import com.samueljuma.firebaseinaction.presentation.ui.main.SessionExpiredDialog
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {

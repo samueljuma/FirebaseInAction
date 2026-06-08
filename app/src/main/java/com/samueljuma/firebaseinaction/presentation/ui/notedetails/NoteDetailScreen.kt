@@ -2,6 +2,12 @@
 
 package com.samueljuma.firebaseinaction.presentation.ui.notedetails
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,14 +44,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
+import com.samueljuma.firebaseinaction.presentation.designsystem.components.NoteImageSection
+import com.samueljuma.firebaseinaction.presentation.ui.common.CancelUploadDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import timber.log.Timber
 
 @Composable
 fun NoteDetailScreenRoot(
@@ -57,6 +65,30 @@ fun NoteDetailScreenRoot(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let {
+            // Take persistent permission BEFORE passing URI anywhere
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // Some URIs don't support persistable permissions
+                // The URI is still valid for the current session
+                Timber.tag("ImagePicker").w(e, "Could not take persistable URI permission")
+            }
+            viewModel.onAction(NoteDetailAction.OnImageSelected(it))
+        }
+    }
+
+    BackHandler {
+        viewModel.onAction(NoteDetailAction.OnBackClicked)
+    }
+
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             NoteDetailEvent.NavigateBack -> onNavigateBack()
@@ -67,7 +99,22 @@ fun NoteDetailScreenRoot(
                     )
                 }
             }
+
+            NoteDetailEvent.LaunchImagePicker -> {
+                imagePickerLauncher.launch(
+                    PickVisualMediaRequest(
+                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                    )
+                )
+            }
         }
+    }
+
+    if (state.showCancelUploadDialog) {
+        CancelUploadDialog(
+            onConfirm = { viewModel.onAction(NoteDetailAction.OnCancelUploadConfirmed) },
+            onDismiss = { viewModel.onAction(NoteDetailAction.OnCancelUploadDismissed) }
+        )
     }
 
     NoteDetailScreen(
@@ -91,7 +138,7 @@ private fun NoteDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (!state.isSynced) {
+                        if (!state.synced) {
                             Icon(
                                 imageVector = Icons.Default.CloudOff,
                                 contentDescription = "Not synced",
@@ -122,13 +169,13 @@ private fun NoteDetailScreen(
                         onClick = { onAction(NoteDetailAction.OnPinClicked) }
                     ) {
                         Icon(
-                            imageVector = if (state.isPinned)
+                            imageVector = if (state.pinned)
                                 Icons.Default.PushPin
                             else
                                 Icons.Outlined.PushPin,
-                            contentDescription = if (state.isPinned)
+                            contentDescription = if (state.pinned)
                                 "Unpin" else "Pin",
-                            tint = if (state.isPinned)
+                            tint = if (state.pinned)
                                 MaterialTheme.colorScheme.primary
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -196,7 +243,6 @@ private fun NoteDetailScreen(
         }
     }
 }
-
 @Composable
 private fun NoteDetailContent(
     state: NoteDetailState,
@@ -208,6 +254,17 @@ private fun NoteDetailContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
+        // ── Image Section ────────────────────────────────────
+        NoteImageSection(
+            imageUrl = state.imageUrl,
+            isEditing = state.isEditing,
+            isUploadingImage = state.isUploadingImage,
+            uploadProgress = state.uploadProgress,
+            onAddImageClicked = { onAction(NoteDetailAction.OnImageClicked) },
+            onRemoveImageClicked = { onAction(NoteDetailAction.OnRemoveImageClicked) }
+        )
+
+        // ── Title ────────────────────────────────────────────
         BasicTextField(
             value = state.title,
             onValueChange = { onAction(NoteDetailAction.OnTitleChanged(it)) },
@@ -222,8 +279,7 @@ private fun NoteDetailContent(
                         Text(
                             text = "Title",
                             style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                                .copy(alpha = 0.3f),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -237,6 +293,7 @@ private fun NoteDetailContent(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+        // ── Content ──────────────────────────────────────────
         BasicTextField(
             value = state.content,
             onValueChange = { onAction(NoteDetailAction.OnContentChanged(it)) },
@@ -248,13 +305,9 @@ private fun NoteDetailContent(
                 Box {
                     if (state.content.isEmpty()) {
                         Text(
-                            text = if (state.isEditing)
-                                "Start writing..."
-                            else
-                                "No content",
+                            text = if (state.isEditing) "Start writing..." else "No content",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                                .copy(alpha = 0.3f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                         )
                     }
                     innerTextField()

@@ -10,6 +10,7 @@ interface NoteRepository {
     fun getNoteById(noteId: String): Flow<Note?>
     suspend fun createNote(note: Note): Result<Unit, DataError>
     suspend fun updateNote(note: Note): Result<Unit, DataError>
+    suspend fun updateNoteImageUrl(noteId: String, imageUrl: String): Result<Unit, DataError>
     suspend fun deleteNote(noteId: String): Result<Unit, DataError>
     suspend fun syncNotes(): Result<Unit, DataError>
     fun startRemoteSync(): Flow<Unit>

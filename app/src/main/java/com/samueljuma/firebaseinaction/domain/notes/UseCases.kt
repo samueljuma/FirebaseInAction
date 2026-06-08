@@ -7,7 +7,6 @@ import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notes.validator.NoteValidator
-import com.samueljuma.firebaseinaction.domain.util.IdGenerator
 
 class GetNotesUseCase(private val repository: NoteRepository) {
     operator fun invoke(): Flow<List<Note>> = repository.getNotes()
@@ -41,13 +40,14 @@ class StartRemoteSyncUseCase(private val repository: NoteRepository) {
 
 class CreateNoteUseCase(
     private val repository: NoteRepository,
-    private val idGenerator: IdGenerator,
     private val sessionStorage: SessionStorage,
     private val noteValidator: NoteValidator
 ) {
     suspend operator fun invoke(
+        id: String,
         title: String,
-        content: String
+        content: String,
+        imageUrl: String? = null
     ): Result<Unit, DataError> {
 
         noteValidator.validate(title, content)
@@ -57,14 +57,15 @@ class CreateNoteUseCase(
             ?: return Result.Error(DataError.Auth.UNKNOWN)
 
         val note = Note(
-            id = idGenerator.generate(),
+            id = id,
             userId = userId,
             title = title,
             content = content,
             createdAt = System.currentTimeMillis(),
             updatedAt = System.currentTimeMillis(),
-            isPinned = false,
-            isSynced = false
+            pinned = false,
+            synced = false,
+            imageUrl = imageUrl
         )
 
         return repository.createNote(note)

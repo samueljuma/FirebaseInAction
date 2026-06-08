@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="360dp"
+    android:height="200dp"
+    android:viewportWidth="360"
+    android:viewportHeight="200">
+
+    <!-- Background -->
+    <path
+        android:pathData="M0,0H360V200H0Z"
+        android:fillColor="#EEEDFE"/>
+
+    <!-- Photo frame -->
+    <path
+        android:pathData="M136,52H224C226.2,52 228,53.8 228,56V132C228,134.2 226.2,136 224,136H136C133.8,136 132,134.2 132,132V56C132,53.8 133.8,52 136,52Z"
+        android:fillColor="#D4CFFE"
+        android:strokeColor="#7F77DD"
+        android:strokeWidth="2.5"/>
+
+    <!-- Sun -->
+    <path
+        android:pathData="M158,78m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0"
+        android:fillColor="#534AB7"
+        android:fillAlpha="0.6"/>
+
+    <!-- Large mountain -->
+    <path
+        android:pathData="M132,136L170,92L208,136Z"
+        android:fillColor="#AFA9EC"/>
+
+    <!-- Small overlapping mountain -->
+    <path
+        android:pathData="M196,136L220,108L228,136Z"
+        android:fillColor="#7F77DD"/>
+
+    <!-- Note lines -->
+    <path
+        android:pathData="M90,157H270"
+        android:strokeColor="#C4BFED"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M110,169H250"
+        android:strokeColor="#C4BFED"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M130,181H230"
+        android:strokeColor="#C4BFED"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"/>
+
+</vector>

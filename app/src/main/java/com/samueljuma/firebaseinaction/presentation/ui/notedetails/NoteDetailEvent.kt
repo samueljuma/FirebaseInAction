@@ -4,5 +4,6 @@ import com.samueljuma.firebaseinaction.core.utils.UiText
 
 sealed interface NoteDetailEvent {
     data object NavigateBack : NoteDetailEvent
+    data object LaunchImagePicker : NoteDetailEvent
     data class ShowSnackbar(val message: UiText) : NoteDetailEvent
 }

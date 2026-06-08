@@ -94,4 +94,5 @@ dependencies {
 
     //Work Manager
     implementation(libs.work.runtime.ktx)
+    implementation(libs.coil.compose)
 }
