@@ -66,7 +66,20 @@ class NoteDetailViewModel(
 
     override fun onAction(action: NoteDetailAction) {
         when (action) {
-            NoteDetailAction.OnBackClicked -> emitEvent(NoteDetailEvent.NavigateBack)
+            NoteDetailAction.OnBackClicked -> {
+                if (state.value.isUploadingImage) {
+                    updateState { copy(showCancelUploadDialog = true) }
+                } else {
+                    emitEvent(NoteDetailEvent.NavigateBack)
+                }
+            }
+            NoteDetailAction.OnCancelUploadConfirmed -> {
+                updateState { copy(showCancelUploadDialog = false) }
+                syncScheduler.cancelImageUpload(noteId)
+                emitEvent(NoteDetailEvent.NavigateBack)
+            }
+            NoteDetailAction.OnCancelUploadDismissed ->
+                updateState { copy(showCancelUploadDialog = false) }
             NoteDetailAction.OnEditClicked -> updateState { copy(isEditing = true) }
             NoteDetailAction.OnSaveClicked -> saveNote()
             NoteDetailAction.OnDeleteClicked -> deleteNote()

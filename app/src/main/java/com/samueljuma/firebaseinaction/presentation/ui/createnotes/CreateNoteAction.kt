@@ -10,4 +10,6 @@ sealed interface CreateNoteAction {
     data object OnImageClicked : CreateNoteAction
     data class OnImageSelected(val uri: Uri) : CreateNoteAction
     data object OnRemoveImageClicked : CreateNoteAction
+    data object OnCancelUploadConfirmed : CreateNoteAction
+    data object OnCancelUploadDismissed : CreateNoteAction
 }

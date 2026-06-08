@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import com.samueljuma.firebaseinaction.presentation.designsystem.components.NoteImageSection
+import com.samueljuma.firebaseinaction.presentation.ui.common.CancelUploadDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -62,9 +63,7 @@ fun CreateNoteScreenRoot(
         uri?.let { viewModel.onAction(CreateNoteAction.OnImageSelected(it)) }
     }
 
-    // Intercept system back so cleanup always routes through the ViewModel.
-    // Disabled while an upload is in progress — back is blocked until the upload settles.
-    BackHandler(enabled = !state.isUploadingImage) {
+    BackHandler {
         viewModel.onAction(CreateNoteAction.OnBackClicked)
     }
 
@@ -82,6 +81,13 @@ fun CreateNoteScreenRoot(
                 )
             }
         }
+    }
+
+    if (state.showCancelUploadDialog) {
+        CancelUploadDialog(
+            onConfirm = { viewModel.onAction(CreateNoteAction.OnCancelUploadConfirmed) },
+            onDismiss = { viewModel.onAction(CreateNoteAction.OnCancelUploadDismissed) }
+        )
     }
 
     CreateNoteScreen(

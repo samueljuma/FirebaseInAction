@@ -4,6 +4,7 @@ package com.samueljuma.firebaseinaction.presentation.ui.notedetails
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import com.samueljuma.firebaseinaction.presentation.designsystem.components.NoteImageSection
+import com.samueljuma.firebaseinaction.presentation.ui.common.CancelUploadDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import timber.log.Timber
@@ -83,6 +85,10 @@ fun NoteDetailScreenRoot(
         }
     }
 
+    BackHandler {
+        viewModel.onAction(NoteDetailAction.OnBackClicked)
+    }
+
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             NoteDetailEvent.NavigateBack -> onNavigateBack()
@@ -102,6 +108,13 @@ fun NoteDetailScreenRoot(
                 )
             }
         }
+    }
+
+    if (state.showCancelUploadDialog) {
+        CancelUploadDialog(
+            onConfirm = { viewModel.onAction(NoteDetailAction.OnCancelUploadConfirmed) },
+            onDismiss = { viewModel.onAction(NoteDetailAction.OnCancelUploadDismissed) }
+        )
     }
 
     NoteDetailScreen(

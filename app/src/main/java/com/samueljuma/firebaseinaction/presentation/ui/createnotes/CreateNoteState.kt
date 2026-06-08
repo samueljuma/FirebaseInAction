@@ -6,5 +6,6 @@ data class CreateNoteState(
     val isSaving: Boolean = false,
     val imageUrl: String? = null,
     val isUploadingImage: Boolean = false,
-    val uploadProgress: Int? = null
+    val uploadProgress: Int? = null,
+    val showCancelUploadDialog: Boolean = false
 )

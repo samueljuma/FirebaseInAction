@@ -14,5 +14,6 @@ data class NoteDetailState(
     val lastUpdated: Long = 0L,
     val imageUrl: String? = null,
     val uploadProgress: Int? = null,  // null = not uploading, 0-100 = progress
-    val isUploadingImage: Boolean = false
+    val isUploadingImage: Boolean = false,
+    val showCancelUploadDialog: Boolean = false
 )

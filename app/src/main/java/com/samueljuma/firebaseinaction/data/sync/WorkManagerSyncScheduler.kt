@@ -62,6 +62,10 @@ class WorkManagerSyncScheduler(
         )
     }
 
+    override fun cancelImageUpload(noteId: String) {
+        workManager.cancelUniqueWork("${ImageUploadWorker.WORK_NAME}_$noteId")
+    }
+
     override fun cancelAllSyncs() {
         workManager.cancelAllWork()
     }

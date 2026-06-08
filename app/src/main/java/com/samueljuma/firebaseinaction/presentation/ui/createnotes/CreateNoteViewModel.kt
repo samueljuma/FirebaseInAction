@@ -36,20 +36,37 @@ class CreateNoteViewModel(
             is CreateNoteAction.OnContentChanged ->
                 updateState { copy(content = action.content) }
             CreateNoteAction.OnSaveClicked -> saveNote()
-            CreateNoteAction.OnBackClicked -> cleanupAndNavigateBack()
+            CreateNoteAction.OnBackClicked -> {
+                if (state.value.isUploadingImage) {
+                    updateState { copy(showCancelUploadDialog = true) }
+                } else {
+                    cleanupAndNavigateBack()
+                }
+            }
             CreateNoteAction.OnImageClicked ->
                 emitEvent(CreateNoteEvent.LaunchImagePicker)
             is CreateNoteAction.OnImageSelected -> uploadImage(action.uri)
             CreateNoteAction.OnRemoveImageClicked ->
                 updateState { copy(imageUrl = null) }
+            CreateNoteAction.OnCancelUploadConfirmed -> {
+                updateState { copy(showCancelUploadDialog = false) }
+                cleanupAndNavigateBack()
+            }
+            CreateNoteAction.OnCancelUploadDismissed ->
+                updateState { copy(showCancelUploadDialog = false) }
         }
     }
 
     private fun cleanupAndNavigateBack() {
+        if (noteSaved) {
+            emitEvent(CreateNoteEvent.NavigateBack)
+            return
+        }
+        syncScheduler.cancelImageUpload(pendingNoteId)
+
         val imageUrl = state.value.imageUrl
-        if (imageUrl != null && !noteSaved) {
+        if (imageUrl != null) {
             viewModelScope.launch {
-                // Delete the orphaned Storage file — note was never saved
                 deleteImageOnlyUseCase(pendingNoteId)
                     .onError { Timber.tag(TAG).e("Failed to delete orphaned image: $it") }
                 emitEvent(CreateNoteEvent.NavigateBack)
