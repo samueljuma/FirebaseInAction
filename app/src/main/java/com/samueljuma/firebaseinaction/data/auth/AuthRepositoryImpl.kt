@@ -14,10 +14,12 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
 
 class AuthRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,
-    private val sessionStorage: SessionStorage
+    private val sessionStorage: SessionStorage,
+    private val crashReporter: CrashReporter
 ) : AuthRepository {
 
     override val currentUser: Flow<User?> = callbackFlow {
@@ -43,6 +45,8 @@ class AuthRepositoryImpl(
             .await()
         val user = result.user?.toUser() ?: error("User is null after sign up")
         sessionStorage.save(user.toSession())
+        crashReporter.setUser(user)
+        crashReporter.setKey("auth_method", "email")
         user
 
     }
@@ -57,6 +61,8 @@ class AuthRepositoryImpl(
         val user = result.user?.toUser()
             ?: error("User is null after Google sign in")
         sessionStorage.save(user.toSession())
+        crashReporter.setUser(user)
+        crashReporter.setKey("auth_method", "email")
         user
     }
 
@@ -67,6 +73,7 @@ class AuthRepositoryImpl(
         // from an unexpected token expiry (session still present). Reversing the order
         // would cause observeTokenExpiry() to incorrectly show the SessionExpiredDialog.
         sessionStorage.clear()
+        crashReporter.clearUser()
         firebaseAuth.signOut()
     }
 
@@ -77,6 +84,8 @@ class AuthRepositoryImpl(
         val result = firebaseAuth.signInWithCredential(credential).await()
         val user = result.user?.toUser() ?: error("User is null after Google sign in")
         sessionStorage.save(user.toSession())
+        crashReporter.setUser(user)
+        crashReporter.setKey("auth_method", "google")
         user
     }
 
