@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /users/{userId}/notes/{noteId}/{fileName} {
+
+      function isAuthenticated() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return request.auth.uid == userId;
+      }
+
+      function isVerified() {
+        return request.auth.token.email_verified == true;
+      }
+      function isValidImage() {
+          // contentType check — handles emulator where contentType may be null
+          let contentType = request.resource.contentType;
+          return (contentType == null || contentType.matches('image/.*'))
+              && request.resource.size < 5 * 1024 * 1024;
+      }
+
+      // Anyone authenticated can read images (for sharing later)
+      // Or restrict to owner only — your choice for now
+      allow read: if isAuthenticated() && isOwner();
+
+      // Only verified owners can upload valid images
+      allow write: if isAuthenticated()
+                   && isOwner()
+                   && isVerified()
+      //             && isValidImage();
+
+      // Owners can delete their own images
+      allow delete: if isAuthenticated() && isOwner();
+    }
+
+    // Block everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

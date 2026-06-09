@@ -17,6 +17,8 @@ android {
         }
     }
 
+    val props = gradleLocalProperties(rootDir, providers)
+
     defaultConfig {
         applicationId = "com.samueljuma.firebaseinaction"
         minSdk = 24
@@ -25,8 +27,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        val props = gradleLocalProperties(rootDir, providers)
         val webClientId = props.getProperty("WEB_CLIENT_ID") ?: ""
         buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
     }
@@ -47,6 +47,26 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    flavorDimensions += "environment"
+
+    productFlavors {
+        val emulatorHost = props.getProperty("emulator.host", "10.0.2.2")
+
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("Boolean", "USE_EMULATOR", "true")
+            buildConfigField("String", "EMULATOR_HOST", "\"$emulatorHost\"")
+
+        }
+        create("prod") {
+            dimension = "environment"
+            buildConfigField("Boolean", "USE_EMULATOR", "false")
+            buildConfigField("String", "EMULATOR_HOST", "\"\"")
+        }
     }
 }
 

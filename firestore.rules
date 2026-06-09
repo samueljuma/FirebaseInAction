@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId}/notes/{noteId} {
+
+      function isAuthenticated() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return request.auth.uid == userId;
+      }
+
+      function isVerified() {
+        return request.auth.token.email_verified == true;
+      }
+
+      function isValidNote() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['title', 'content', 'userId', 'createdAt', 'updatedAt'])
+          && data.title is string
+          && data.title.size() <= 500
+          && data.content is string
+          && data.content.size() <= 50000
+          && data.userId == userId;
+      }
+
+      // No isValidImage() here — images live in Storage, not Firestore
+
+      allow read: if isAuthenticated()
+                  && isOwner()
+                  && isVerified();
+
+      allow create: if isAuthenticated()
+                    && isOwner()
+                    && isVerified()
+                    && isValidNote();
+
+      allow update: if isAuthenticated()
+                    && isOwner()
+                    && isVerified()
+                    && isValidNote()
+                    && request.resource.data.userId == resource.data.userId
+                    && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isAuthenticated()
+                    && isOwner()
+                    && isVerified();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

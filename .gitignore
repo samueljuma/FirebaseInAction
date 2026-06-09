@@ -16,3 +16,9 @@
 local.properties
 google-services.json
 *.json
+/release
+/.agents
+emulator-data/
+firebase-debug.log
+firestore-debug.log
+firebase-export-*/
