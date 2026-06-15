@@ -29,6 +29,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val webClientId = props.getProperty("WEB_CLIENT_ID") ?: ""
         buildConfigField("String", "WEB_CLIENT_ID", "\"$webClientId\"")
+        val mixpanelToken = props.getProperty("MIXPANEL_TOKEN") ?: ""
+        buildConfigField("String", "MIXPANEL_TOKEN", "\"$mixpanelToken\"")
     }
 
     signingConfigs {
@@ -136,4 +138,5 @@ dependencies {
     //Work Manager
     implementation(libs.work.runtime.ktx)
     implementation(libs.coil.compose)
+    implementation(libs.mixpanel.android)
 }

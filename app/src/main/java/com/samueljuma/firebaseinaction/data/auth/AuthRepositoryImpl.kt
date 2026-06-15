@@ -50,6 +50,7 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         crashReporter.setUser(user)
         crashReporter.setKey("auth_method", "email")
+        analyticsTracker.identify(user.uid)
         analyticsTracker.logEvent(
             AnalyticsEvent.SignUpCompleted(AnalyticsEvent.SignInMethod.EMAIL)
         )
@@ -69,6 +70,7 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         crashReporter.setUser(user)
         crashReporter.setKey("auth_method", "email")
+        analyticsTracker.identify(user.uid)
         analyticsTracker.logEvent(
             AnalyticsEvent.SignInCompleted(AnalyticsEvent.SignInMethod.EMAIL)
         )
@@ -83,6 +85,7 @@ class AuthRepositoryImpl(
         // would cause observeTokenExpiry() to incorrectly show the SessionExpiredDialog.
         sessionStorage.clear()
         crashReporter.clearUser()
+        analyticsTracker.reset()
         firebaseAuth.signOut()
     }
 
@@ -95,6 +98,7 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         crashReporter.setUser(user)
         crashReporter.setKey("auth_method", "google")
+        analyticsTracker.identify(user.uid)
         analyticsTracker.logEvent(
             AnalyticsEvent.SignInCompleted(AnalyticsEvent.SignInMethod.GOOGLE)
         )
