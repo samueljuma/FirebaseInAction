@@ -7,6 +7,8 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
 import com.samueljuma.firebaseinaction.core.utils.DataError
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.notes.DeleteNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.GetNoteByIdUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
@@ -28,7 +30,8 @@ class NoteDetailViewModel(
     private val deleteNoteUseCase: DeleteNoteUseCase,
     private val uploadNoteImageUseCase: UploadNoteImageUseCase,
     private val deleteNoteImageUseCase: DeleteNoteImageUseCase,
-    private val syncScheduler: SyncScheduler
+    private val syncScheduler: SyncScheduler,
+    private val analyticsTracker: AnalyticsTracker
 ) : MviViewModel<NoteDetailState, NoteDetailAction, NoteDetailEvent>(
     NoteDetailState()
 ) {
@@ -109,7 +112,11 @@ class NoteDetailViewModel(
 
     private fun deleteNote() {
         viewModelScope.launch {
-            deleteNoteUseCase(noteId)
+            deleteNoteUseCase(
+                noteId = state.value.noteId,
+                noteCreatedAt = state.value.createdAt,
+                hadImage = state.value.imageUrl != null,
+            )
                 .onSuccess { emitEvent(NoteDetailEvent.NavigateBack) }
                 .onError { error ->
                     emitEvent(NoteDetailEvent.ShowSnackbar(error.toUiText()))
@@ -155,6 +162,10 @@ class NoteDetailViewModel(
                             updateState { copy(uploadProgress = uploadState.percentage) }
                         }
                         is UploadState.Success -> {
+                            // Log Image Added
+                            analyticsTracker.logEvent(
+                                AnalyticsEvent.NoteImageAdded(AnalyticsEvent.ImageSource.EDIT)
+                            )
                             updateState {
                                 copy(
                                     imageUrl = uploadState.downloadUrl,

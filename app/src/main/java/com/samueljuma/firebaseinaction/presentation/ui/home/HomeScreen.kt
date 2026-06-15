@@ -213,7 +213,7 @@ private fun NotesList(
             NoteCard(
                 note = note,
                 onNoteClicked = { onAction(HomeAction.OnNoteClicked(note.id)) },
-                onDeleteClicked = { onAction(HomeAction.OnDeleteNote(note.id)) },
+                onDeleteClicked = { onAction(HomeAction.OnDeleteNote(note)) },
                 onPinClicked = { onAction(HomeAction.OnPinNote(note)) }
             )
         }
