@@ -12,6 +12,7 @@ import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.firestoreSafeCall
 import com.samueljuma.firebaseinaction.data.notes.remote.NoteDto
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toDto
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toEntity
 import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
@@ -32,7 +33,8 @@ class NoteRepositoryImpl(
     private val noteDao: NoteDao,
     private val firestore: FirebaseFirestore,
     private val syncScheduler: SyncScheduler,
-    private val sessionStorage: SessionStorage
+    private val sessionStorage: SessionStorage,
+    private val crashReporter: CrashReporter
 ) : NoteRepository {
 
     private suspend fun getCurrentUserId(): String =
@@ -54,6 +56,7 @@ class NoteRepositoryImpl(
     }
 
     override suspend fun createNote(note: Note): Result<Unit, DataError> {
+        crashReporter.log("Creating note locally: ${note.id}")
         return try {
             noteDao.upsertNote(note.toEntity().copy(synced = false))
             syncScheduler.scheduleNotesSync()
@@ -62,6 +65,7 @@ class NoteRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to create note locally")
+            crashReporter.recordException(e)
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
@@ -82,6 +86,7 @@ class NoteRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to update note locally")
+            crashReporter.recordException(e)
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
@@ -95,11 +100,13 @@ class NoteRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to update image URL for note $noteId")
+            crashReporter.recordException(e)
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
 
     override suspend fun deleteNote(noteId: String): Result<Unit, DataError> {
+        crashReporter.log("Deleting note: $noteId")
         return try {
             noteDao.softDeleteNote(noteId)
             syncScheduler.scheduleNotesSync()
@@ -108,6 +115,7 @@ class NoteRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to delete note")
+            crashReporter.recordException(e)
             Result.Error(DataError.Local.UNKNOWN)
         }
     }
@@ -116,6 +124,8 @@ class NoteRepositoryImpl(
         val userId = getCurrentUserId()
         return firestoreSafeCall {
             val unsyncedNotes = noteDao.getUnsyncedNotes(userId)
+            crashReporter.log("Syncing ${unsyncedNotes.size} unsynced notes")
+            crashReporter.setKey("unsynced_note_count", unsyncedNotes.size)
             Timber.tag(TAG).d("Syncing ${unsyncedNotes.size} unsynced notes")
             coroutineScope {
                 unsyncedNotes.map { entity ->
@@ -140,7 +150,7 @@ class NoteRepositoryImpl(
 
                 }.awaitAll()
             }
-
+            crashReporter.log("Sync complete")
         }
     }
 
