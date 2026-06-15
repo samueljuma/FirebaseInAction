@@ -72,7 +72,7 @@ class HomeViewModel(
     override fun onAction(action: HomeAction) {
         when (action) {
             HomeAction.OnSignOutClicked -> signOut()
-            is HomeAction.OnDeleteNote -> deleteNote(action.noteId)
+            is HomeAction.OnDeleteNote -> deleteNote(action.note)
             is HomeAction.OnPinNote -> pinNote(action.note)
             HomeAction.OnCreateNoteClicked ->
                 emitEvent(HomeEvent.NavigateToCreateNote)
@@ -94,9 +94,13 @@ class HomeViewModel(
         }
     }
 
-    private fun deleteNote(noteId: String) {
+    private fun deleteNote(note: Note) {
         viewModelScope.launch {
-            deleteNoteUseCase(noteId)
+            deleteNoteUseCase(
+                noteId = note.id,
+                noteCreatedAt = note.createdAt,
+                hadImage = note.imageUrl !=null,
+            )
                 .onError { error ->
                     emitEvent(HomeEvent.ShowSnackbar(error.toUiText()))
                 }
@@ -113,6 +117,6 @@ class HomeViewModel(
     }
 
     companion object {
-        const val TAG = "HomeViewModel"
+        private const val TAG = "HomeViewModel"
     }
 }

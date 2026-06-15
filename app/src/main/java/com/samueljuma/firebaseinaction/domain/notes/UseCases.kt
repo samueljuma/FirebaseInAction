@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.notes.validator.NoteValidator
 
 class GetNotesUseCase(private val repository: NoteRepository) {
@@ -17,9 +19,29 @@ class GetNoteByIdUseCase(private val repository: NoteRepository) {
         repository.getNoteById(noteId)
 }
 
-class DeleteNoteUseCase(private val repository: NoteRepository) {
-    suspend operator fun invoke(noteId: String): Result<Unit, DataError> =
-        repository.deleteNote(noteId)
+class DeleteNoteUseCase(
+    private val repository: NoteRepository,
+    private val analyticsTracker: AnalyticsTracker
+) {
+    suspend operator fun invoke(
+        noteId: String,
+        noteCreatedAt: Long,
+        hadImage: Boolean
+    ): Result<Unit, DataError> {
+        return repository.deleteNote(noteId).also { result ->
+            if(result is Result.Success){
+                val ageMs = System.currentTimeMillis() - noteCreatedAt
+                val ageDays = ageMs / (1000 * 60 * 60 * 24)
+                analyticsTracker.logEvent(
+                    AnalyticsEvent.NoteDeleted(
+                        hadImage = hadImage,
+                        noteAgeDays = ageDays
+                    )
+                )
+            }
+        }
+    }
+
 }
 
 class UpdateNoteUseCase(
@@ -41,7 +63,8 @@ class StartRemoteSyncUseCase(private val repository: NoteRepository) {
 class CreateNoteUseCase(
     private val repository: NoteRepository,
     private val sessionStorage: SessionStorage,
-    private val noteValidator: NoteValidator
+    private val noteValidator: NoteValidator,
+    private val analyticsTracker: AnalyticsTracker
 ) {
     suspend operator fun invoke(
         id: String,
@@ -68,6 +91,12 @@ class CreateNoteUseCase(
             imageUrl = imageUrl
         )
 
-        return repository.createNote(note)
+        return repository.createNote(note).also { result ->
+            if(result is Result.Success){
+                analyticsTracker.logEvent(
+                    AnalyticsEvent.NoteSaved(hasImage = imageUrl != null)
+                )
+            }
+        }
     }
 }

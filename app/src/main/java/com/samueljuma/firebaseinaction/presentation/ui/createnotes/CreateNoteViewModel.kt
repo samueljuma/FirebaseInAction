@@ -8,6 +8,8 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
 import com.samueljuma.firebaseinaction.core.utils.DataError
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.notes.CreateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.storage.UploadState
 import com.samueljuma.firebaseinaction.domain.storage.usecases.DeleteImageOnlyUseCase
@@ -23,9 +25,14 @@ class CreateNoteViewModel(
     private val uploadImageOnlyUseCase: UploadImageOnlyUseCase,
     private val deleteImageOnlyUseCase: DeleteImageOnlyUseCase,
     private val idGenerator: IdGenerator,
-    private val syncScheduler: SyncScheduler
+    private val syncScheduler: SyncScheduler,
+    private val analyticsTracker: AnalyticsTracker
 ) : MviViewModel<CreateNoteState, CreateNoteAction, CreateNoteEvent>(CreateNoteState()) {
 
+    init {
+        // Fire immediately when screen opens
+        analyticsTracker.logEvent(AnalyticsEvent.NoteCreateStarted)
+    }
     private val pendingNoteId: String = idGenerator.generate()
     private var noteSaved = false
 
@@ -83,7 +90,11 @@ class CreateNoteViewModel(
                 when (uploadState) {
                     is UploadState.Progress ->
                         updateState { copy(uploadProgress = uploadState.percentage) }
-                    is UploadState.Success ->
+                    is UploadState.Success ->{
+                        // Log when image is added in create flow
+                        analyticsTracker.logEvent(
+                            AnalyticsEvent.NoteImageAdded(AnalyticsEvent.ImageSource.CREATE)
+                        )
                         updateState {
                             copy(
                                 imageUrl = uploadState.downloadUrl,
@@ -91,6 +102,7 @@ class CreateNoteViewModel(
                                 uploadProgress = null
                             )
                         }
+                    }
                     is UploadState.Error -> {
                         emitEvent(CreateNoteEvent.ShowSnackbar(uploadState.error.toUiText()))
                         if (uploadState.error == DataError.Storage.NETWORK_ERROR) {

@@ -14,12 +14,15 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
 
 class AuthRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,
     private val sessionStorage: SessionStorage,
-    private val crashReporter: CrashReporter
+    private val crashReporter: CrashReporter,
+    private val analyticsTracker: AnalyticsTracker
 ) : AuthRepository {
 
     override val currentUser: Flow<User?> = callbackFlow {
@@ -47,6 +50,9 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         crashReporter.setUser(user)
         crashReporter.setKey("auth_method", "email")
+        analyticsTracker.logEvent(
+            AnalyticsEvent.SignUpCompleted(AnalyticsEvent.SignInMethod.EMAIL)
+        )
         user
 
     }
@@ -63,6 +69,9 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         crashReporter.setUser(user)
         crashReporter.setKey("auth_method", "email")
+        analyticsTracker.logEvent(
+            AnalyticsEvent.SignInCompleted(AnalyticsEvent.SignInMethod.EMAIL)
+        )
         user
     }
 
@@ -86,6 +95,9 @@ class AuthRepositoryImpl(
         sessionStorage.save(user.toSession())
         crashReporter.setUser(user)
         crashReporter.setKey("auth_method", "google")
+        analyticsTracker.logEvent(
+            AnalyticsEvent.SignInCompleted(AnalyticsEvent.SignInMethod.GOOGLE)
+        )
         user
     }
 

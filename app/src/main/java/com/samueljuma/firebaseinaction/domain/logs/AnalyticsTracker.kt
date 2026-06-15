@@ -1,0 +1,6 @@
+package com.samueljuma.firebaseinaction.domain.logs
+
+interface AnalyticsTracker {
+    fun logEvent(event: AnalyticsEvent)
+}
+
