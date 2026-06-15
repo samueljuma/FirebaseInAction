@@ -27,7 +27,7 @@ class FirebaseInActionApp : Application() {
         // 3. Crashlytics collection — after emulator config
         // USE_EMULATOR = true  (devDebug/devRelease) → disable
         // USE_EMULATOR = false (prodRelease)          → enable
-        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = !BuildConfig.USE_EMULATOR
+        // FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = !BuildConfig.USE_EMULATOR // This is handles in logsModule by koin
 
         Timber.d("Crashlytics enabled: ${!BuildConfig.USE_EMULATOR}")
 
