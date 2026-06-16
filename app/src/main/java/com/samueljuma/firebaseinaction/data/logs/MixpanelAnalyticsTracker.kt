@@ -15,7 +15,6 @@ class MixpanelAnalyticsTracker(
             event.params.forEach { (key, value) -> put(key, value) }
         }
         mixpanel.track(event.name, props)
-        mixpanel.flush()
         Timber.tag("Analytics").d("Event: ${event.name} params: ${event.params}")
     }
 
@@ -24,6 +23,7 @@ class MixpanelAnalyticsTracker(
     }
 
     override fun reset() {
+        mixpanel.flush() // send buffered events before reset
         mixpanel.reset()
     }
 }
