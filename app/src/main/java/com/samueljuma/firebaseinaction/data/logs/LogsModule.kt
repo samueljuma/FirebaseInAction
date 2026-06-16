@@ -32,6 +32,7 @@ val logsModule = module {
     single {
         MixpanelAPI.getInstance(androidContext(), BuildConfig.MIXPANEL_TOKEN, false).also {
             if (BuildConfig.USE_EMULATOR) it.optOutTracking()
+            it.setServerURL("https://api-eu.mixpanel.com")
         }
     }
     single { MixpanelAnalyticsTracker(get()) }
