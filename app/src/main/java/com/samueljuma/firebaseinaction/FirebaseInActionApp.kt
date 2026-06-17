@@ -6,6 +6,7 @@ import com.samueljuma.firebaseinaction.core.di.appModules
 import com.samueljuma.firebaseinaction.core.emulator.FirebaseEmulatorConfig
 import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
+import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
@@ -43,6 +44,9 @@ class FirebaseInActionApp : Application() {
         // Crashlytics loses the user ID. Re-tagging here ensures no anonymous crash reports.
         val koin = GlobalContext.get()
         koin.get<AuthRepository>().getCurrentUserSync()
-            ?.let { koin.get<CrashReporter>().setUser(it) }
+            ?.let {
+                koin.get<CrashReporter>().setUser(it)
+                koin.get<AnalyticsTracker>().identify(it.uid)
+            }
     }
 }

@@ -26,4 +26,12 @@ class FirebaseAnalyticsTracker(
         analytics.logEvent(event.name, bundle)
         Timber.tag("Analytics").d("Event: ${event.name} params: ${event.params}")
     }
+
+    override fun identify(userId: String) {
+        analytics.setUserId(userId)
+    }
+
+    override fun reset() {
+        analytics.setUserId(null)
+    }
 }
