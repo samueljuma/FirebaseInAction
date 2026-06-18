@@ -1,8 +1,8 @@
-package com.samueljuma.firebaseinaction.data.logs
+package com.samueljuma.firebaseinaction.data.observability
 
 import com.mixpanel.android.mpmetrics.MixpanelAPI
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import org.json.JSONObject
 import timber.log.Timber
 

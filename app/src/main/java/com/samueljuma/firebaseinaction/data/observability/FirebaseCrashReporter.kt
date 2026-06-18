@@ -1,8 +1,8 @@
-package com.samueljuma.firebaseinaction.data.logs
+package com.samueljuma.firebaseinaction.data.observability
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.samueljuma.firebaseinaction.domain.auth.models.User
-import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
 
 class FirebaseCrashReporter(
     private val crashlytics: FirebaseCrashlytics

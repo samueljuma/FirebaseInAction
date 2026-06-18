@@ -1,4 +1,4 @@
-package com.samueljuma.firebaseinaction.domain.logs
+package com.samueljuma.firebaseinaction.domain.observability
 
 import com.samueljuma.firebaseinaction.domain.auth.models.User
 

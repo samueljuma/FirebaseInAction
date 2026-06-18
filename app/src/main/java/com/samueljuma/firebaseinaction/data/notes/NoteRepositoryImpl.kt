@@ -12,9 +12,10 @@ import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.firestoreSafeCall
 import com.samueljuma.firebaseinaction.data.notes.remote.NoteDto
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
-import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toDto
 import com.samueljuma.firebaseinaction.domain.notes.mapper.toEntity
+import com.samueljuma.firebaseinaction.domain.observability.PerformanceTracker
 import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -34,7 +35,8 @@ class NoteRepositoryImpl(
     private val firestore: FirebaseFirestore,
     private val syncScheduler: SyncScheduler,
     private val sessionStorage: SessionStorage,
-    private val crashReporter: CrashReporter
+    private val crashReporter: CrashReporter,
+    private val performanceTracker: PerformanceTracker
 ) : NoteRepository {
 
     private suspend fun getCurrentUserId(): String =
@@ -73,12 +75,12 @@ class NoteRepositoryImpl(
     override suspend fun updateNote(note: Note): Result<Unit, DataError> {
         return try {
             noteDao.updateNoteFields(
-                noteId    = note.id,
-                title     = note.title,
-                content   = note.content,
-                pinned    = note.pinned,
+                noteId = note.id,
+                title = note.title,
+                content = note.content,
+                pinned = note.pinned,
                 updatedAt = System.currentTimeMillis(),
-                imageUrl  = note.imageUrl
+                imageUrl = note.imageUrl
             )
             syncScheduler.scheduleNotesSync()
             Result.Success(Unit)
@@ -91,7 +93,10 @@ class NoteRepositoryImpl(
         }
     }
 
-    override suspend fun updateNoteImageUrl(noteId: String, imageUrl: String): Result<Unit, DataError> {
+    override suspend fun updateNoteImageUrl(
+        noteId: String,
+        imageUrl: String
+    ): Result<Unit, DataError> {
         return try {
             noteDao.updateNoteImageUrl(noteId, imageUrl)
             syncScheduler.scheduleNotesSync()
@@ -121,36 +126,39 @@ class NoteRepositoryImpl(
     }
 
     override suspend fun syncNotes(): Result<Unit, DataError> {
-        val userId = getCurrentUserId()
         return firestoreSafeCall {
-            val unsyncedNotes = noteDao.getUnsyncedNotes(userId)
-            crashReporter.log("Syncing ${unsyncedNotes.size} unsynced notes")
-            crashReporter.setKey("unsynced_note_count", unsyncedNotes.size)
-            Timber.tag(TAG).d("Syncing ${unsyncedNotes.size} unsynced notes")
-            coroutineScope {
-                unsyncedNotes.map { entity ->
-                    async {
-                        if (entity.isDeleted) {
-                            // Push deletion to Firestore
-                            firestore.document("users/$userId/notes/${entity.id}")
-                                .delete()
-                                .await()
-                            // Hard delete from Room — no longer needed
-                            noteDao.hardDeleteNote(entity.id)
-                            Timber.tag(TAG).d("Synced deletion: ${entity.id}")
-                        } else {
-                            // Push update/create to Firestore
-                            firestore.document("users/$userId/notes/${entity.id}")
-                                .set(entity.toDto())
-                                .await()
-                            noteDao.markAsSynced(entity.id)
-                            Timber.tag(TAG).d("Synced note: ${entity.id}")
+            val userId = getCurrentUserId()
+            performanceTracker.startTrace("firestore_fetch_notes").use { trace ->
+                val unsyncedNotes = noteDao.getUnsyncedNotes(userId)
+                trace.putMetric("unsynced_count", unsyncedNotes.size.toLong())
+                crashReporter.log("Syncing ${unsyncedNotes.size} unsynced notes")
+                crashReporter.setKey("unsynced_note_count", unsyncedNotes.size)
+                Timber.tag(TAG).d("Syncing ${unsyncedNotes.size} unsynced notes")
+                coroutineScope {
+                    unsyncedNotes.map { entity ->
+                        async {
+                            if (entity.isDeleted) {
+                                // Push deletion to Firestore
+                                firestore.document("users/$userId/notes/${entity.id}")
+                                    .delete()
+                                    .await()
+                                // Hard delete from Room — no longer needed
+                                noteDao.hardDeleteNote(entity.id)
+                                Timber.tag(TAG).d("Synced deletion: ${entity.id}")
+                            } else {
+                                // Push update/create to Firestore
+                                firestore.document("users/$userId/notes/${entity.id}")
+                                    .set(entity.toDto())
+                                    .await()
+                                noteDao.markAsSynced(entity.id)
+                                Timber.tag(TAG).d("Synced note: ${entity.id}")
+                            }
                         }
-                    }
 
-                }.awaitAll()
+                    }.awaitAll()
+                }
+                crashReporter.log("Sync complete")
             }
-            crashReporter.log("Sync complete")
         }
     }
 

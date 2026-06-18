@@ -1,13 +1,12 @@
 package com.samueljuma.firebaseinaction
 
 import android.app.Application
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.samueljuma.firebaseinaction.core.di.appModules
 import com.samueljuma.firebaseinaction.core.emulator.FirebaseEmulatorConfig
 import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
-import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.GlobalContext

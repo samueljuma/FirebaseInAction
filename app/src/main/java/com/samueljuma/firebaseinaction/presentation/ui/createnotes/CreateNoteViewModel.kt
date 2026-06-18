@@ -8,8 +8,8 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
 import com.samueljuma.firebaseinaction.core.utils.DataError
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.notes.CreateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.storage.UploadState
 import com.samueljuma.firebaseinaction.domain.storage.usecases.DeleteImageOnlyUseCase
