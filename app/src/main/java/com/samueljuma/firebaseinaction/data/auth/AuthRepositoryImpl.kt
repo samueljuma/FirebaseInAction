@@ -14,9 +14,9 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
-import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
 
 class AuthRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,

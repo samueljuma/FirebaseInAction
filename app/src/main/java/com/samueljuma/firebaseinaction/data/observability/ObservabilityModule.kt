@@ -1,17 +1,19 @@
-package com.samueljuma.firebaseinaction.data.logs
+package com.samueljuma.firebaseinaction.data.observability
 
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.firebase.perf.FirebasePerformance
 import com.mixpanel.android.mpmetrics.MixpanelAPI
 import com.samueljuma.firebaseinaction.BuildConfig
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
-import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.PerformanceTracker
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-val logsModule = module {
+val observabilityModule = module {
     // Crashlytics
     single {
         FirebaseCrashlytics.getInstance().also {
@@ -42,5 +44,16 @@ val logsModule = module {
         CompositeAnalyticsTracker(
             listOf(get<FirebaseAnalyticsTracker>(), get<MixpanelAnalyticsTracker>())
         )
+    }
+
+    // Performance Monitoring
+    single { FirebasePerformance.getInstance() }
+
+    single<PerformanceTracker> {
+        if (BuildConfig.USE_EMULATOR) {
+            NoOpPerformanceTracker()
+        } else {
+            FirebasePerformanceTracker(get())
+        }
     }
 }

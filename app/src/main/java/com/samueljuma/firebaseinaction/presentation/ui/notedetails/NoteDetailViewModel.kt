@@ -7,8 +7,8 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
 import com.samueljuma.firebaseinaction.core.utils.DataError
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.notes.DeleteNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.GetNoteByIdUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase

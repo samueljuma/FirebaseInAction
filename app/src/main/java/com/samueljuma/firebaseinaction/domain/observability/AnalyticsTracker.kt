@@ -1,4 +1,4 @@
-package com.samueljuma.firebaseinaction.domain.logs
+package com.samueljuma.firebaseinaction.domain.observability
 
 interface AnalyticsTracker {
     fun logEvent(event: AnalyticsEvent)

@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsEvent
-import com.samueljuma.firebaseinaction.domain.logs.AnalyticsTracker
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
+import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.notes.validator.NoteValidator
 
 class GetNotesUseCase(private val repository: NoteRepository) {

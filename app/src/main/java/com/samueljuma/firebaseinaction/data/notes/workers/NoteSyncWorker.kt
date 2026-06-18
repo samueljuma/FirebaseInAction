@@ -9,13 +9,15 @@ import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.notes.NoteRepository
+import com.samueljuma.firebaseinaction.domain.observability.PerformanceTracker
 import timber.log.Timber
 
 class NoteSyncWorker(
     context: Context,
     params: WorkerParameters,
     private val noteRepository: NoteRepository,
-    private val sessionStorage: SessionStorage
+    private val sessionStorage: SessionStorage,
+    private val performanceTracker: PerformanceTracker
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -23,26 +25,29 @@ class NoteSyncWorker(
         val uid = sessionStorage.get()?.uid
             ?: return Result.failure()
 
-        Timber.tag(WORK_NAME).d("Starting note sync for user: ${uid}")
+        Timber.tag(WORK_NAME).d("Starting note sync for user: $uid")
 
-        return noteRepository.syncNotes()
-            .onSuccess {
-                Timber.tag(WORK_NAME).d("Note sync completed successfully")
-            }
-            .onError { error ->
-                Timber.tag(WORK_NAME).e("Note sync failed: $error")
-            }
-            .let { result ->
-                when (result) {
-                    is com.samueljuma.firebaseinaction.core.utils.Result.Success ->
-                        Result.success()
-                    is com.samueljuma.firebaseinaction.core.utils.Result.Error ->
-                        when (result.error) {
-                            DataError.Firestore.NETWORK_ERROR -> Result.retry() // retry on network
-                            else -> Result.failure() // don't retry on other errors
+        return performanceTracker.startTrace("note_sync").use { trace ->
+            trace.putAttribute("user_id", uid)
+
+            noteRepository.syncNotes()
+                .let { result ->
+                    when (result) {
+                        is com.samueljuma.firebaseinaction.core.utils.Result.Success -> {
+                            Timber.tag(WORK_NAME).d("Note sync completed")
+                            Result.success()
                         }
+                        is com.samueljuma.firebaseinaction.core.utils.Result.Error -> {
+                            trace.putAttribute("error", result.error.toString())
+                            Timber.tag(WORK_NAME).e("Note sync failed: ${result.error}")
+                            when (result.error) {
+                                DataError.Firestore.NETWORK_ERROR -> Result.retry()
+                                else -> Result.failure()
+                            }
+                        }
+                    }
                 }
-            }
+        }
     }
 
     companion object {

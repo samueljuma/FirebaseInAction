@@ -1,7 +1,7 @@
 package com.samueljuma.firebaseinaction.core.logging
 
 import android.util.Log
-import com.samueljuma.firebaseinaction.domain.logs.CrashReporter
+import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
 import org.koin.core.context.GlobalContext
 import timber.log.Timber
 
