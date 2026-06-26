@@ -1,9 +1,13 @@
 package com.samueljuma.firebaseinaction
 
 import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.samueljuma.firebaseinaction.core.di.appModules
 import com.samueljuma.firebaseinaction.core.emulator.FirebaseEmulatorConfig
+import com.samueljuma.firebaseinaction.core.lifecycle.AppForegroundTracker
 import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
+import com.samueljuma.firebaseinaction.core.notifications.NotificationChannels
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
@@ -14,8 +18,12 @@ import org.koin.core.context.startKoin
 import timber.log.Timber
 
 class FirebaseInActionApp : Application() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
+
+        AppForegroundTracker.init()
+        NotificationChannels.createChannels(this)
 
         // 1. Timber first — logging available for everything that follows
         if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())

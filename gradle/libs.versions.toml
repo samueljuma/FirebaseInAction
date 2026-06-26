@@ -23,6 +23,7 @@ ksp = "2.3.7"
 workManager = "2.10.1"
 coil = "2.7.0"
 mixpanel = "7.5.3"
+material3 = "1.4.0"
 
 
 
@@ -95,6 +96,12 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # Mixpanel
 mixpanel-android = { group = "com.mixpanel.android", name = "mixpanel-android", version.ref = "mixpanel" }
+
+# Lifecycle process
+androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycle" }
+
+# Material 3
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 
 
 [plugins]

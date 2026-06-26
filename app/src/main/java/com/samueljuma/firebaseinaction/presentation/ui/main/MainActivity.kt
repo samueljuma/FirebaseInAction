@@ -12,11 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.samueljuma.firebaseinaction.core.navigation.AppNavHost
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
-import com.samueljuma.firebaseinaction.presentation.ui.main.SessionExpiredDialog
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
-
     private val viewModel by viewModel<MainViewModel>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,7 +28,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 val state = viewModel.state
-                if(!state.isCheckingAuth){
+                if (!state.isCheckingAuth) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         AppNavHost(
                             isLoggedIn = state.isLoggedIn,

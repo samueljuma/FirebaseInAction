@@ -4,6 +4,7 @@ import com.samueljuma.firebaseinaction.data.auth.di.authModule
 import com.samueljuma.firebaseinaction.data.observability.observabilityModule
 import com.samueljuma.firebaseinaction.data.notes.di.notesModule
 import com.samueljuma.firebaseinaction.data.notes.local.di.dataBaseModule
+import com.samueljuma.firebaseinaction.data.notifications.di.pushTokenModule
 import com.samueljuma.firebaseinaction.data.storage.storageModule
 import com.samueljuma.firebaseinaction.data.sync.di.syncModule
 
@@ -13,5 +14,6 @@ val appModules = listOf(
     dataBaseModule,
     storageModule,
     syncModule,
-    observabilityModule
+    observabilityModule,
+    pushTokenModule
 )
