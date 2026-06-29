@@ -14,6 +14,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.notifications.NotificationRepository
 import com.samueljuma.firebaseinaction.domain.notifications.PushTokenRepository
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
@@ -24,7 +25,8 @@ class AuthRepositoryImpl(
     private val sessionStorage: SessionStorage,
     private val crashReporter: CrashReporter,
     private val analyticsTracker: AnalyticsTracker,
-    private val pushTokenRepository: PushTokenRepository
+    private val pushTokenRepository: PushTokenRepository,
+    private val notificationRepository: NotificationRepository
 ) : AuthRepository {
 
     override val currentUser: Flow<User?> = callbackFlow {
@@ -96,6 +98,7 @@ class AuthRepositoryImpl(
         // from an unexpected token expiry (session still present). Reversing the order
         // would cause observeTokenExpiry() to incorrectly show the SessionExpiredDialog.
         sessionStorage.clear()
+        notificationRepository.clearLocalData()
         crashReporter.clearUser()
         analyticsTracker.reset()
         firebaseAuth.signOut()

@@ -13,6 +13,7 @@ import com.samueljuma.firebaseinaction.presentation.ui.auth.emailverification.Em
 import com.samueljuma.firebaseinaction.presentation.ui.createnotes.CreateNoteScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.home.HomeScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.notedetails.NoteDetailScreenRoot
+import com.samueljuma.firebaseinaction.presentation.ui.notifications.NotificationsScreenRoot
 import timber.log.Timber
 
 @Composable
@@ -99,7 +100,16 @@ fun AppNavHost(
                     navController.navigate(
                         AppScreens.NoteDetailScreen.route.replace("{noteId}", noteId)
                     )
+                },
+                onNavigateToNotifications = {
+                    navController.navigate(AppScreens.NotificationsScreen.route)
                 }
+            )
+        }
+
+        composable(route = AppScreens.NotificationsScreen.route) {
+            NotificationsScreenRoot(
+                onNavigateBack = { navController.navigateUp() }
             )
         }
 

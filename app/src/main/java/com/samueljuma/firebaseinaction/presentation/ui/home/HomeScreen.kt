@@ -71,7 +71,8 @@ fun HomeScreenRoot(
     viewModel: HomeViewModel = koinViewModel(),
     onNavigateToLogin: () -> Unit,
     onNavigateToCreateNote: () -> Unit,
-    onNavigateToNoteDetail: (String) -> Unit
+    onNavigateToNoteDetail: (String) -> Unit,
+    onNavigateToNotifications: () -> Unit
 ) {
     // Request Notifications Permission if need be
     NotificationPermissionRequester()
@@ -93,6 +94,7 @@ fun HomeScreenRoot(
                     )
                 }
             }
+            HomeEvent.NavigateToNotifications -> onNavigateToNotifications()
         }
     }
 
@@ -129,6 +131,25 @@ private fun HomeScreen(
                     }
                 },
                 actions = {
+                    BadgedBox(
+                        badge = {
+                            if (state.unreadCount > 0) {
+                                Badge {
+                                    Text(
+                                        text = if (state.unreadCount > 99) "99+"
+                                               else state.unreadCount.toString()
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = { onAction(HomeAction.OnNotificationsClicked) }) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications"
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = { onAction(HomeAction.OnSignOutClicked) }
                     ) {
