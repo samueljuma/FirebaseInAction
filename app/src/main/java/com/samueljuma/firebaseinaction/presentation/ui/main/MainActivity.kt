@@ -12,11 +12,13 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.compose.rememberNavController
 import com.samueljuma.firebaseinaction.core.navigation.AppNavHost
+import com.samueljuma.firebaseinaction.core.navigation.AppScreens
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import com.samueljuma.firebaseinaction.presentation.designsystem.components.InAppNotificationBanner
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -33,13 +35,15 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
+            val state = viewModel.state
             AppTheme {
-                val state = viewModel.state
                 if (!state.isCheckingAuth) {
+                    val navController = rememberNavController()
                     Box(modifier = Modifier.fillMaxSize()) {
                         AppNavHost(
                             isLoggedIn = state.isLoggedIn,
-                            isEmailVerified = state.isEmailVerified
+                            isEmailVerified = state.isEmailVerified,
+                            navController = navController
                         )
 
                         AnimatedVisibility(
@@ -52,7 +56,10 @@ class MainActivity : ComponentActivity() {
                                 InAppNotificationBanner(
                                     notification = notification,
                                     onClick = {
-                                        //TODO
+                                        viewModel.onDismissNotification()
+                                        navController.navigate(
+                                            AppScreens.NotificationsScreen.createRoute(notification.id)
+                                        )
                                     },
                                     onDismiss = { viewModel.onDismissNotification() }
                                 )
@@ -63,7 +70,9 @@ class MainActivity : ComponentActivity() {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = 0.5f))
+                                    .background(
+                                        MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)
+                                    )
                             )
                             SessionExpiredDialog(
                                 onReLogin = { viewModel.onReLoginClicked() },

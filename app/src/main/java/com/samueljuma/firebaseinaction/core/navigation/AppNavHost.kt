@@ -2,6 +2,7 @@ package com.samueljuma.firebaseinaction.core.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,10 +20,9 @@ import timber.log.Timber
 @Composable
 fun AppNavHost(
     isLoggedIn: Boolean,
-    isEmailVerified: Boolean
+    isEmailVerified: Boolean,
+    navController: NavHostController = rememberNavController()
 ){
-    val navController = rememberNavController()
-
     val startDestination = when {
         !isLoggedIn -> AppScreens.LoginScreen.route
         !isEmailVerified -> AppScreens.EmailVerificationScreen.route
@@ -102,12 +102,21 @@ fun AppNavHost(
                     )
                 },
                 onNavigateToNotifications = {
-                    navController.navigate(AppScreens.NotificationsScreen.route)
+                    navController.navigate("notifications_screen")
                 }
             )
         }
 
-        composable(route = AppScreens.NotificationsScreen.route) {
+        composable(
+            route = AppScreens.NotificationsScreen.route,
+            arguments = listOf(
+                navArgument("notificationId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
             NotificationsScreenRoot(
                 onNavigateBack = { navController.navigateUp() }
             )

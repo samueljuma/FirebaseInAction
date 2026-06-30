@@ -10,6 +10,7 @@ import com.samueljuma.firebaseinaction.data.storage.storageModule
 import com.samueljuma.firebaseinaction.data.sync.di.syncModule
 
 val appModules = listOf(
+    coreModule,
     authModule,
     notesModule,
     dataBaseModule,

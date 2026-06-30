@@ -6,22 +6,23 @@ import com.samueljuma.firebaseinaction.core.utils.DataError
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.core.utils.firestoreSafeCall
 import com.samueljuma.firebaseinaction.data.notifications.local.NotificationDao
+import com.samueljuma.firebaseinaction.data.notifications.local.NotificationEntity
+import com.samueljuma.firebaseinaction.data.notifications.remote.NotificationDto
+import com.samueljuma.firebaseinaction.data.notifications.remote.toDto
+import com.samueljuma.firebaseinaction.data.notifications.remote.toEntity as dtoToEntity
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notifications.NotificationRepository
 import com.samueljuma.firebaseinaction.domain.notifications.mapper.toDomain
 import com.samueljuma.firebaseinaction.domain.notifications.mapper.toEntity
 import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import timber.log.Timber
-import kotlin.coroutines.cancellation.CancellationException
 
 class NotificationRepositoryImpl(
     private val notificationDao: NotificationDao,
@@ -32,6 +33,9 @@ class NotificationRepositoryImpl(
     private suspend fun getCurrentUserId(): String =
         sessionStorage.get()?.uid ?: error("No authenticated user")
 
+    private fun notificationsCollection(userId: String) =
+        firestore.collection("users/$userId/notifications")
+
     override fun getNotifications(): Flow<List<AppNotification>> =
         notificationDao.getNotifications()
             .map { entities -> entities.map { it.toDomain() } }
@@ -39,70 +43,59 @@ class NotificationRepositoryImpl(
     override fun getUnreadCount(): Flow<Int> =
         notificationDao.getUnreadCount()
 
-    override suspend fun saveNotification(notification: AppNotification): Result<Unit, DataError> {
-        return try {
+    override suspend fun saveNotification(notification: AppNotification): Result<Unit, DataError> =
+        firestoreSafeCall {
             notificationDao.upsertNotification(notification.toEntity())
-            firestoreSafeCall {
-                val userId = getCurrentUserId()
-                firestore.document("users/$userId/notifications/${notification.id}")
-                    .set(notification)
-                    .await()
-            }
-            Result.Success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to save notification")
-            Result.Error(DataError.Local.UNKNOWN)
+            val userId = getCurrentUserId()
+            notificationsCollection(userId).document(notification.id)
+                .set(notification.toDto())
+                .await()
         }
-    }
 
-    override suspend fun markAsRead(notificationId: String): Result<Unit, DataError> {
-        return try {
+    override suspend fun markAsRead(notificationId: String): Result<Unit, DataError> =
+        firestoreSafeCall {
             notificationDao.markAsRead(notificationId)
-            firestoreSafeCall {
-                val userId = getCurrentUserId()
-                firestore.document("users/$userId/notifications/$notificationId")
-                    .update("read", true)
-                    .await()
-            }
-            Result.Success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to mark notification as read")
-            Result.Error(DataError.Local.UNKNOWN)
+            val userId = getCurrentUserId()
+            notificationsCollection(userId).document(notificationId)
+                .update("read", true)
+                .await()
         }
-    }
+
+    override suspend fun deleteNotification(notificationId: String): Result<Unit, DataError> =
+        firestoreSafeCall {
+            notificationDao.deleteById(notificationId)
+            val userId = getCurrentUserId()
+            notificationsCollection(userId).document(notificationId)
+                .delete()
+                .await()
+        }
 
     override fun startRemoteSync(): Flow<Unit> = flow {
         val userId = getCurrentUserId()
-        emitAll(
-            callbackFlow {
-                val listener = firestore
-                    .collection("users/$userId/notifications")
-                    .orderBy("receivedAt", Query.Direction.DESCENDING)
-                    .limit(50)
-                    .addSnapshotListener { snapshot, error ->
-                        if (error != null) {
-                            Timber.tag(TAG).e(error, "Firestore listener error")
-                            return@addSnapshotListener
-                        }
-                        snapshot?.documents?.let { docs ->
-                            launch(Dispatchers.IO) {
-                                val entities = docs.mapNotNull { doc ->
-                                    doc.toObject(AppNotification::class.java)?.toEntity()
-                                }
-                                notificationDao.upsertNotifications(entities)
-                                Timber.tag(TAG).d("Synced ${entities.size} notifications")
-                            }
-                        }
-                        trySend(Unit)
+        val remoteEntities = callbackFlow {
+            val listener = notificationsCollection(userId)
+                .orderBy("receivedAt", Query.Direction.DESCENDING)
+                .limit(50)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Timber.tag(TAG).e(error, "Firestore listener error")
+                        return@addSnapshotListener
                     }
-                awaitClose {
-                    Timber.tag(TAG).d("Stopping notifications listener")
-                    listener.remove()
+                    val entities = snapshot?.documents
+                        ?.mapNotNull { it.toObject(NotificationDto::class.java)?.dtoToEntity() }
+                        .orEmpty()
+                    trySend(entities)
                 }
+            awaitClose {
+                Timber.tag(TAG).d("Stopping notifications listener")
+                listener.remove()
+            }
+        }
+        // Persist within the collecting coroutine — no detached launch.
+        emitAll(
+            remoteEntities.map { entities ->
+                notificationDao.upsertNotifications(entities)
+                Timber.tag(TAG).d("Synced ${entities.size} notifications")
             }
         )
     }

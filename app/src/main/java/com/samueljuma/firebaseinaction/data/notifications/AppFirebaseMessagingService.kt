@@ -34,8 +34,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
         val notification = AppNotification(
             id = message.messageId ?: UUID.randomUUID().toString(),
-            title = data["title"] ?: "FirebaseInAction",
-            body = data["body"] ?: "",
+            title = data["title"] ?: "Notey",
+            body = data["body"] ?: "This is a sample body of the message you would receive for any notifications sent to you",
             receivedAt = System.currentTimeMillis(),
             read = false
         )
