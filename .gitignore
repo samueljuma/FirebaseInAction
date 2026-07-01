@@ -16,6 +16,8 @@
 local.properties
 google-services.json
 *.json
+!firebase.json
+!remote_config.json
 /release
 /.agents
 emulator-data/

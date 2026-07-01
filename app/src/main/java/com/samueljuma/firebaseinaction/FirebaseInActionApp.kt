@@ -9,8 +9,13 @@ import com.samueljuma.firebaseinaction.core.lifecycle.AppForegroundTracker
 import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
 import com.samueljuma.firebaseinaction.core.notifications.NotificationChannels
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
+import com.samueljuma.firebaseinaction.domain.config.FeatureFlags
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.koin.workManagerFactory
 import org.koin.core.context.GlobalContext
@@ -18,6 +23,8 @@ import org.koin.core.context.startKoin
 import timber.log.Timber
 
 class FirebaseInActionApp : Application() {
+
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
@@ -55,5 +62,11 @@ class FirebaseInActionApp : Application() {
                 koin.get<CrashReporter>().setUser(it)
                 koin.get<AnalyticsTracker>().identify(it.uid)
             }
+
+        // 6. Warm Remote Config — resolving FeatureFlags applies in-app defaults, publishes any
+        // previously-activated (cached) values, and registers the live-update listener. Then fetch
+        // the latest in the background: applied live this session, and cached for the next launch.
+        val featureFlags = koin.get<FeatureFlags>()
+        applicationScope.launch { featureFlags.sync() }
     }
 }

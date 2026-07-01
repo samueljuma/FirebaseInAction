@@ -173,27 +173,46 @@ private fun HomeScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+            if (state.welcomeMessage.isNotBlank()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Text(
+                        text = state.welcomeMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(12.dp)
                     )
                 }
-                state.notes.isEmpty() -> {
-                    EmptyNotesContent(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                else -> {
-                    NotesList(
-                        notes = state.notes,
-                        onAction = onAction
-                    )
+            }
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    state.isLoading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    state.notes.isEmpty() -> {
+                        EmptyNotesContent(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    else -> {
+                        NotesList(
+                            notes = state.notes,
+                            onAction = onAction
+                        )
+                    }
                 }
             }
         }
@@ -371,6 +390,7 @@ private fun HomeScreenPreview() {
         HomeScreen(
             state = HomeState(
                 isLoading = false,
+                welcomeMessage = "Welcome to Notey!",
                 notes = listOf(
                     Note(
                         id = "1",
