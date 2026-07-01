@@ -112,3 +112,82 @@ No extra plumbing needed: `NoteEntity.toDto()` feeds `syncNotes()`'s `.set(entit
 - `compileDevDebugKotlin` succeeds.
 - Set a note's `reminderAt` locally → after a sync cycle, the field appears on the Firestore document
   at `users/{uid}/notes/{id}`.
+
+---
+
+## Milestone 2 — Reminder UI (Material 3 date + time picker)
+
+Not a Cloud Functions milestone per se, but the client-side prerequisite: a way to actually set the
+`reminderAt` added in M1. Three gotchas worth remembering, all Android/Compose-general rather than
+Firebase-specific — but each would have shipped a real bug if missed.
+
+### Gotcha 1 — state must carry fields it doesn't render
+`NoteDetailViewModel.buildNoteFromState()` rebuilds a whole `Note` from `NoteDetailState` on *every*
+save — including saves triggered by unrelated actions (pin, image upload). If `reminderAt` weren't
+also stored in `NoteDetailState` (populated in `observeNote()`, read back in `buildNoteFromState()`),
+pinning a note would silently null out its reminder. **Lesson:** any domain field a "rebuild from
+state" pattern touches must live in state, even if nothing on screen displays it directly —
+`reminderFiredAt` is the same case: never rendered, but must round-trip or an unrelated edit un-does
+the "already delivered" guard from M1.
+
+### Gotcha 2 — editing a fired reminder must un-fire it
+`OnReminderDateTimeSelected` always resets `reminderFiredAt = null` when setting a *new* `reminderAt`.
+Without this, re-scheduling a reminder that already fired once would leave `reminderFiredAt` non-null
+forever — the M5 scheduled query filters on `reminderFiredAt == null`, so the new time would silently
+never fire.
+
+### Gotcha 3 — Material 3 has a `DatePickerDialog` but no `TimePickerDialog`
+`TimePicker` (the wheel/dial widget) ships with no dialog wrapper — unlike `DatePicker`. Added
+`TimePickerDialog.kt` in `presentation/designsystem/components/`: a plain `AlertDialog` with the
+`TimePicker` composable passed as `text` content, per Google's own documented recipe. Reusable
+wherever else the app needs a time picker.
+
+### Gotcha 4 — `DatePickerState.selectedDateMillis` is UTC midnight, not local
+The picked date comes back as **UTC midnight** of that calendar day — not midnight in the device's
+timezone. Naively seeding a local `Calendar` with that value and then overwriting hour/minute can land
+on the *wrong day* for any timezone behind UTC (UTC midnight Jan 15 is 4pm Jan 14 in US Pacific, for
+example). Fix: read `YEAR`/`MONTH`/`DAY_OF_MONTH` out of a **UTC** calendar, then build the real
+instant in a **local** calendar using those values plus the locally-picked hour/minute. A classic,
+easy-to-miss Compose date/time bug — worth remembering any time a `DatePicker` result feeds a
+timestamp.
+
+### Two-layer future-time validation
+- **UI**: `DatePickerState`'s `selectableDates` (a `SelectableDates` object delegating to
+  `DatePickerDefaults.AllDates`, overriding `isSelectableDate`) disables past *days* in the picker
+  itself.
+- **ViewModel**: `confirmReminderTime()` still rejects an exact timestamp ≤ now — needed because the
+  date picker only restricts by day; picking *today* with an already-passed time slips through the UI
+  layer and must be caught after combining date + time.
+
+### Gotcha 5 — picker flow state belongs in the ViewModel, not `remember`
+First pass put `showDatePicker`/`showTimePicker` in composable-local `remember { mutableStateOf(...) }`,
+reasoning (wrongly) that it was analogous to `LaunchImagePicker`'s `ActivityResultLauncher`. It isn't:
+the image picker launches an **external, OS-owned** UI whose own state isn't ours to keep. The date/time
+pickers are **in-app dialogs we fully control** — the same category as `showCancelUploadDialog`, which
+already lived in `NoteDetailState`. That was the precedent to follow.
+
+The concrete bug with `remember`: it does **not** survive activity recreation (e.g. device rotation) —
+only `rememberSaveable` does, and even that wouldn't help restore *which* Calendar values were mid-flow.
+`NoteDetailState` lives in the ViewModel, which **does** survive rotation (standard `ViewModel`
+lifecycle). So the original version: open the date picker, rotate — the dialog silently vanishes.
+
+Fixed by moving `showDatePicker`, `showTimePicker`, and `pickedReminderDateMillis` into
+`NoteDetailState`, and splitting the single `OnReminderDateTimeSelected` action into an explicit state
+machine: `OnSetReminderClicked` → `showDatePicker=true`; `OnReminderDateSelected` → stage the day,
+flip to `showTimePicker=true`; `OnReminderTimeSelected` → combine day + time (the UTC/local math from
+Gotcha 4), validate, commit `reminderAt`. `LaunchReminderPicker` (a one-shot `Event`) was removed
+entirely — since the dialog's visibility is now just a state field, the screen renders it directly
+(`if (state.showDatePicker) { ... }`), exactly like `showCancelUploadDialog`. Bonus: the UTC/local
+`Calendar` combination logic moved out of the Composable into the ViewModel, which is also the more
+correct home for it — that's business logic, not rendering, and it's now unit-testable without Compose.
+
+**Lesson:** when adding a new in-app dialog, look for the nearest existing dialog in the same
+ViewModel/screen and match its state ownership — don't reach for `remember` out of habit.
+
+### Verify
+- `compileDevDebugKotlin` succeeds.
+- Set a reminder for tomorrow → saved locally and synced to Firestore.
+- Try picking today + a past time → rejected with a snackbar.
+- Open the date picker, rotate the device → the dialog is still open (was the bug before Gotcha 5's fix).
+- Set a reminder, let it conceptually "fire" (`reminderFiredAt` set by M5 later), then re-schedule it
+  to a new time → `reminderFiredAt` resets to `null`.

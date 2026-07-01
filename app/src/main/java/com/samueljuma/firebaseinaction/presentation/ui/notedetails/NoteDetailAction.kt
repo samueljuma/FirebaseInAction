@@ -15,4 +15,10 @@ sealed interface NoteDetailAction {
     data object OnRemoveImageClicked : NoteDetailAction
     data object OnCancelUploadConfirmed : NoteDetailAction
     data object OnCancelUploadDismissed : NoteDetailAction
+    data object OnSetReminderClicked : NoteDetailAction
+    data class OnReminderDateSelected(val utcDateMillis: Long) : NoteDetailAction
+    data class OnReminderTimeSelected(val hour: Int, val minute: Int) : NoteDetailAction
+    data object OnDatePickerDismissed : NoteDetailAction
+    data object OnTimePickerDismissed : NoteDetailAction
+    data object OnClearReminderClicked : NoteDetailAction
 }

@@ -3,6 +3,8 @@ package com.samueljuma.firebaseinaction.presentation.ui.notedetails
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.samueljuma.firebaseinaction.R
+import com.samueljuma.firebaseinaction.core.utils.UiText
 import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.core.utils.onSuccess
 import com.samueljuma.firebaseinaction.core.utils.toUiText
@@ -22,6 +24,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.TimeZone
 
 class NoteDetailViewModel(
     savedStateHandle: SavedStateHandle,
@@ -60,7 +64,9 @@ class NoteDetailViewModel(
                             isLoading = false,
                             createdAt = note.createdAt,
                             lastUpdated = note.updatedAt,
-                            imageUrl = note.imageUrl
+                            imageUrl = note.imageUrl,
+                            reminderAt = note.reminderAt,
+                            reminderFiredAt = note.reminderFiredAt
                         )
                     }
                 }
@@ -94,7 +100,61 @@ class NoteDetailViewModel(
             NoteDetailAction.OnImageClicked ->  emitEvent(NoteDetailEvent.LaunchImagePicker)
             is NoteDetailAction.OnImageSelected -> uploadImage(action.uri)
             NoteDetailAction.OnRemoveImageClicked -> removeImage()
+            NoteDetailAction.OnSetReminderClicked ->
+                updateState { copy(showDatePicker = true) }
+            is NoteDetailAction.OnReminderDateSelected ->
+                updateState {
+                    copy(
+                        showDatePicker = false,
+                        showTimePicker = true,
+                        pickedReminderDateMillis = action.utcDateMillis
+                    )
+                }
+            NoteDetailAction.OnDatePickerDismissed ->
+                updateState { copy(showDatePicker = false) }
+            is NoteDetailAction.OnReminderTimeSelected ->
+                confirmReminderTime(action.hour, action.minute)
+            NoteDetailAction.OnTimePickerDismissed ->
+                updateState { copy(showTimePicker = false, pickedReminderDateMillis = null) }
+            NoteDetailAction.OnClearReminderClicked ->
+                updateState { copy(reminderAt = null, reminderFiredAt = null) }
         }
+    }
+
+    private fun confirmReminderTime(hour: Int, minute: Int) {
+        val pickedDateMillis = state.value.pickedReminderDateMillis
+        updateState { copy(showTimePicker = false, pickedReminderDateMillis = null) }
+        if (pickedDateMillis == null) return
+
+        // DatePickerState.selectedDateMillis (staged as pickedReminderDateMillis) is UTC midnight
+        // of the chosen day, not device-local midnight. Naively seeding a local Calendar with it
+        // and overwriting hour/minute can land on the wrong day for timezones behind UTC (UTC
+        // midnight Jan 15 is Jan 14 evening in US timezones). Read the day out of a UTC calendar,
+        // then build the real instant in a local calendar using the locally-picked hour/minute.
+        val utcDate = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            timeInMillis = pickedDateMillis
+        }
+        val localInstant = Calendar.getInstance().apply {
+            set(
+                utcDate.get(Calendar.YEAR),
+                utcDate.get(Calendar.MONTH),
+                utcDate.get(Calendar.DAY_OF_MONTH),
+                hour,
+                minute,
+                0
+            )
+            set(Calendar.MILLISECOND, 0)
+        }
+        val epochMillis = localInstant.timeInMillis
+
+        if (epochMillis <= System.currentTimeMillis()) {
+            emitEvent(NoteDetailEvent.ShowSnackbar(UiText.StringResource(R.string.error_reminder_in_past)))
+            return
+        }
+        // A new reminderAt always resets reminderFiredAt — otherwise re-scheduling an
+        // already-fired reminder to a new time would leave it permanently "fired" and
+        // it would never actually push.
+        updateState { copy(reminderAt = epochMillis, reminderFiredAt = null) }
     }
 
     private fun saveNote() {
@@ -147,7 +207,9 @@ class NoteDetailViewModel(
         updatedAt = System.currentTimeMillis(),
         pinned = pinned,
         synced = false,
-        imageUrl = state.value.imageUrl
+        imageUrl = state.value.imageUrl,
+        reminderAt = state.value.reminderAt,
+        reminderFiredAt = state.value.reminderFiredAt
     )
 
     private fun uploadImage(uri: Uri) {
