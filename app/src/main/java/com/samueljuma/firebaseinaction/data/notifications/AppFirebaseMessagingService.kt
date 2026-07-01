@@ -49,6 +49,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             InAppNotificationBus.emit(notification)
         } else {
             notificationDisplayer.show(
+                notificationId = notification.id,
                 title = notification.title,
                 body = notification.body,
                 data = data
