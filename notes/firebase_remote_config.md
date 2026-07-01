@@ -151,3 +151,37 @@ RC has **no local emulator** — it always hits the live backend. So the interva
 Run the app and watch Logcat (tag `FeatureFlags`): a `Synced (...)` line prints the resolved
 `AppConfig` on launch. Change a value in the console (or edit `remote_config.json` + `deploy`) → a
 `Live update → ...` line appears within seconds, no restart.
+
+---
+
+## Milestone 3 — Boolean flag → real feature (FCM banner kill-switch)
+
+The payoff: `enable_in_app_banner` now controls an existing feature from the cloud, no release
+required. In `MainViewModel.observeInAppNotifications()` we consult the flag before showing the
+foreground banner:
+
+```kotlin
+InAppNotificationBus.events
+    .filter { featureFlags.config.value.inAppBannerEnabled }   // remote kill-switch
+    .onEach { notification -> /* …show banner… */ }
+    .launchIn(viewModelScope)
+```
+
+### Design choices
+- **Declarative gate via `filter`**, not an `if (...) return@collect` inside `collect`. Reading
+  `config.value` inside `filter` gates the stream on current state *without* letting that state drive
+  emissions.
+- **Why not `combine(events, config)`?** It would re-emit whenever the flag flips and re-show stale
+  banners — wrong. We want the flag to *gate*, not *trigger*.
+- **Emit-time semantics:** the flag is evaluated per event, so a live flip suppresses the *next*
+  banner; one already on screen (auto-dismisses in 8s) rides out. Right altitude for a transient UI
+  element — no need for `flatMapLatest`-style reactivity that would entangle with manual dismissal.
+- **Gate in the ViewModel**, not in `AppFirebaseMessagingService` — the messaging service stays a
+  dumb emitter; presentation policy lives in presentation.
+- **No DI change**: `MainViewModel` is `viewModelOf(::MainViewModel)`, so Koin auto-wires the new
+  `FeatureFlags` constructor arg by type.
+
+### Verify
+Send an FCM test message with the app foregrounded → banner shows. Set `enable_in_app_banner=false`
+(console or `remote_config.json` + `deploy`), send again → no banner (Logcat: "disabled via Remote
+Config — skipping"). Flip back to `true` → banner returns. All without rebuilding the app.

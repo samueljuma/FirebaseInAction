@@ -13,9 +13,13 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ReloadCurrentUserUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignOutUseCase
+import com.samueljuma.firebaseinaction.domain.config.FeatureFlags
 import com.samueljuma.firebaseinaction.core.notifications.InAppNotificationBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -25,7 +29,8 @@ class MainViewModel(
     private val getCurrentUserSyncUseCase: GetCurrentUserSyncUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val reloadCurrentUserUseCase: ReloadCurrentUserUseCase,
-    private val signOutUseCase: SignOutUseCase
+    private val signOutUseCase: SignOutUseCase,
+    private val featureFlags: FeatureFlags
 ) : ViewModel() {
 
     var state by mutableStateOf(MainState())
@@ -125,16 +130,20 @@ class MainViewModel(
     }
 
     private fun observeInAppNotifications() {
-        viewModelScope.launch {
-            InAppNotificationBus.events.collect { notification ->
+        InAppNotificationBus.events
+            // Remote kill-switch: only surface the banner while the flag is on. Evaluated per event,
+            // so a live config change takes effect on the next notification. (Not `combine` — the
+            // flag should gate the stream, not re-trigger banners when it changes.)
+            .filter { featureFlags.config.value.inAppBannerEnabled }
+            .onEach { notification ->
                 autoDismissJob?.cancel()
                 state = state.copy(activeNotification = notification)
-                autoDismissJob = launch {
+                autoDismissJob = viewModelScope.launch {
                     delay(8_000)
                     state = state.copy(activeNotification = null)
                 }
             }
-        }
+            .launchIn(viewModelScope)
     }
 
     fun onDismissNotification() {
