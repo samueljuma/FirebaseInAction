@@ -7,11 +7,10 @@ import com.samueljuma.firebaseinaction.domain.notifications.usecases.GetNotifica
 import com.samueljuma.firebaseinaction.domain.notifications.usecases.GetUnreadCountUseCase
 import com.samueljuma.firebaseinaction.domain.notifications.usecases.MarkNotificationReadUseCase
 import com.samueljuma.firebaseinaction.domain.notifications.usecases.StartNotificationSyncUseCase
-import com.samueljuma.firebaseinaction.core.di.APPLICATION_SCOPE
 import com.samueljuma.firebaseinaction.presentation.ui.notifications.NotificationsViewModel
-import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
@@ -24,13 +23,5 @@ val notificationsModule = module {
     factoryOf(::DeleteNotificationUseCase)
     factoryOf(::StartNotificationSyncUseCase)
 
-    viewModel {
-        NotificationsViewModel(
-            savedStateHandle = get(),
-            getNotificationsUseCase = get(),
-            markNotificationReadUseCase = get(),
-            deleteNotificationUseCase = get(),
-            applicationScope = get(APPLICATION_SCOPE)
-        )
-    }
+    viewModelOf(::NotificationsViewModel)
 }
