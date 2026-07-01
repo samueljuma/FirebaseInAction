@@ -67,3 +67,48 @@ deploy (M6).
 ### Verify
 - `pip install -r functions/requirements.txt` inside the venv succeeds.
 - `firebase emulators:exec --only functions "…"` → `✔ Loaded functions definitions from source`.
+
+---
+
+## Milestone 1 — Reminder fields, end to end
+
+Before any function exists, the note needs somewhere to carry a reminder. Two nullable fields, added
+consistently through every layer:
+
+| Field | Meaning |
+|---|---|
+| `reminderAt: Long?` | When the reminder is due (`null` = no reminder set) |
+| `reminderFiredAt: Long?` | `null` while pending; stamped once delivered — the guard against re-firing |
+
+### Every layer, one field name
+`Note` (domain) → `NoteEntity` (Room) → `NoteDto` (Firestore) → all 4 mapper functions in
+`NoteMappers.kt`. Keeping the field name identical across all four avoids a translation layer and
+keeps `toDto()`/`toEntity()` mechanical. Both default to `null`, so every existing call site
+(note creation, other mappers, tests) keeps compiling unchanged — additive, not breaking.
+
+### Extending the update path, not duplicating it
+`NoteDao.updateNoteFields()` already receives the whole edited `Note` via `updateNote()` in
+`NoteRepositoryImpl` — reminders are just two more columns in that same `UPDATE`. Adding a parallel
+"update reminder only" method would fork the write path for no reason (the whole note already flows
+through here on every edit).
+
+### Room migration — and the gotcha that would've broken it silently
+Bumped `AppDatabase` **v5 → v6** with `MIGRATION_5_6` (two `ALTER TABLE … ADD COLUMN` statements,
+nullable, `DEFAULT NULL` — the cheapest kind of Room migration, no table rebuild needed unlike the
+v3→v4 rename).
+
+**Gotcha:** defining a `Migration` object isn't enough — Room only applies migrations passed to
+`.addMigrations(...)` in `DatabaseModule.kt`. `MIGRATION_5_6` had to be added there explicitly; forgetting
+this step would compile fine and then crash (or silently mismatch) the first time a real device tries
+to open the upgraded database. **Lesson:** a new migration is two edits, not one — define it *and*
+register it.
+
+### Firestore round-trip
+No extra plumbing needed: `NoteEntity.toDto()` feeds `syncNotes()`'s `.set(entity.toDto())`, and
+`NoteDto.toEntity()` feeds the `startRemoteSync()` listener — both already pass every field through, so
+`reminderAt`/`reminderFiredAt` sync automatically once present on the DTO.
+
+### Verify
+- `compileDevDebugKotlin` succeeds.
+- Set a note's `reminderAt` locally → after a sync cycle, the field appears on the Firestore document
+  at `users/{uid}/notes/{id}`.

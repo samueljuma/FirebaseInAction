@@ -50,7 +50,9 @@ interface NoteDao {
             pinned   = :pinned,
             updatedAt = :updatedAt,
             synced   = 0,
-            imageUrl = :imageUrl
+            imageUrl = :imageUrl,
+            reminderAt = :reminderAt,
+            reminderFiredAt = :reminderFiredAt
         WHERE id = :noteId
     """)
     suspend fun updateNoteFields(
@@ -59,7 +61,9 @@ interface NoteDao {
         content: String,
         pinned: Boolean,
         updatedAt: Long,
-        imageUrl: String?
+        imageUrl: String?,
+        reminderAt: Long?,
+        reminderFiredAt: Long?
     )
 
     @Transaction

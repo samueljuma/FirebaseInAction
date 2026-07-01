@@ -14,7 +14,9 @@ fun NoteEntity.toNote() = Note(
     updatedAt = updatedAt,
     pinned = pinned,
     synced = synced,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    reminderAt = reminderAt,
+    reminderFiredAt = reminderFiredAt
 )
 
 // Domain → Entity
@@ -27,7 +29,9 @@ fun Note.toEntity() = NoteEntity(
     updatedAt = updatedAt,
     pinned = pinned,
     synced = synced,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    reminderAt = reminderAt,
+    reminderFiredAt = reminderFiredAt
 )
 
 // Dto → Entity (from Firestore — always synced)
@@ -40,7 +44,9 @@ fun NoteDto.toEntity() = NoteEntity(
     updatedAt = updatedAt,
     pinned = pinned,
     synced = true,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    reminderAt = reminderAt,
+    reminderFiredAt = reminderFiredAt
 )
 
 // Entity → Dto (going to Firestore)
@@ -52,5 +58,7 @@ fun NoteEntity.toDto() = NoteDto(
     createdAt = createdAt,
     updatedAt = updatedAt,
     pinned = pinned,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    reminderAt = reminderAt,
+    reminderFiredAt = reminderFiredAt
 )

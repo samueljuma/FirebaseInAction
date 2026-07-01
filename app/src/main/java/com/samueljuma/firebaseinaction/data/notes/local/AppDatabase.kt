@@ -9,7 +9,7 @@ import com.samueljuma.firebaseinaction.data.notifications.local.NotificationEnti
 
 @Database(
     entities = [NoteEntity::class, NotificationEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -70,6 +70,14 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+        // Adds per-note reminders: reminderAt (when it's due) and reminderFiredAt
+        // (null while pending; set once delivered so it can't fire twice).
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN reminderAt INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE notes ADD COLUMN reminderFiredAt INTEGER DEFAULT NULL")
             }
         }
     }

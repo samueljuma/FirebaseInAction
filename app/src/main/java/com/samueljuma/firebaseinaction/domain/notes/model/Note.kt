@@ -9,5 +9,9 @@ data class Note(
     val updatedAt: Long,
     val pinned: Boolean,
     val synced: Boolean,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    // When set, a reminder push is due at this time. reminderFiredAt is null while pending —
+    // set once the reminder function has delivered it, so it never fires twice.
+    val reminderAt: Long? = null,
+    val reminderFiredAt: Long? = null
 )
