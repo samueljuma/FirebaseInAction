@@ -185,3 +185,50 @@ InAppNotificationBus.events
 Send an FCM test message with the app foregrounded → banner shows. Set `enable_in_app_banner=false`
 (console or `remote_config.json` + `deploy`), send again → no banner (Logcat: "disabled via Remote
 Config — skipping"). Flip back to `true` → banner returns. All without rebuilding the app.
+
+---
+
+## Milestone 4 — Long + String flags on Home
+
+Exercises the remaining value types in real UI, both in `HomeViewModel`.
+
+### `max_free_notes` (Long) — a free-tier gate
+`OnCreateNoteClicked` now routes through `onCreateNoteClicked()`, which blocks creation once the
+limit is hit and reuses the existing `ShowSnackbar` event (no new event type):
+
+```kotlin
+val limit = featureFlags.config.value.maxFreeNotes          // getLong under the hood
+if (state.value.notes.size >= limit) {                      // Int >= Long compiles in Kotlin
+    emitEvent(HomeEvent.ShowSnackbar(UiText.StringResource(R.string.note_limit_reached, limit)))
+    return
+}
+```
+The `%1$d` format arg is filled from the Long via `context.getString(id, *args)`.
+
+### `welcome_message` (String) — reactive UI
+Collected from the flag flow into state, so the Home banner reflects console changes live:
+
+```kotlin
+featureFlags.config
+    .onEach { updateState { copy(welcomeMessage = it.welcomeMessage) } }
+    .launchIn(viewModelScope)
+```
+`HomeScreen` renders a `Card` banner above the list only when `welcomeMessage.isNotBlank()` — an
+empty string (the default) hides it.
+
+### Verify
+- Set `max_free_notes = 2`, publish → creating a 3rd note is blocked with the snackbar.
+- Set `welcome_message` to any text → the banner appears on Home (live via the update listener);
+  clear it → the banner disappears.
+
+---
+
+## Recap — the three value types, three real features
+| Flag | Type | Read | Drives |
+| --- | --- | --- | --- |
+| `enable_in_app_banner` | Boolean | `getBoolean` | FCM foreground banner kill-switch (M3) |
+| `max_free_notes` | Long | `getLong` | Free-tier note-creation gate (M4) |
+| `welcome_message` | String | `getString` | Live Home greeting banner (M4) |
+
+All decoded once in `FirebaseFeatureFlags.toAppConfig()`; the app only ever sees the typed
+`AppConfig` behind the `FeatureFlags` interface.

@@ -7,5 +7,6 @@ data class HomeState(
     val notes: List<Note> = emptyList(),
     val isLoading: Boolean = false,
     val loggedInUser: User? = null,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    val welcomeMessage: String = ""
 )
