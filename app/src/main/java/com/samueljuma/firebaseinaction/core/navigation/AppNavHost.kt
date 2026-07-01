@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.samueljuma.firebaseinaction.core.notifications.NoteDeepLinks
 import com.samueljuma.firebaseinaction.core.notifications.NotificationDeepLinks
 import com.samueljuma.firebaseinaction.presentation.ui.auth.signin.SignInScreenRoot
 import com.samueljuma.firebaseinaction.presentation.ui.auth.signup.SignUpScreenRoot
@@ -155,11 +156,34 @@ fun AppNavHost(
 
         composable(
             route = AppScreens.NoteDetailScreen.route,
-            arguments = listOf(navArgument("noteId") { type = NavType.StringType })
-        ) {
-            NoteDetailScreenRoot(
-                onNavigateBack = { navController.navigateUp() }
+            arguments = listOf(navArgument("noteId") { type = NavType.StringType }),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = NoteDeepLinks.PATTERN }
             )
+        ) {
+            // Reachable via deep link (a tapped reminder push), so — like NotificationsScreen —
+            // it can be entered directly without going through the auth flow first. Guard it:
+            // only render for a fully authenticated user, otherwise bounce to the appropriate
+            // auth screen and clear the back stack.
+            val canAccess = isLoggedIn && isEmailVerified
+            LaunchedEffect(canAccess) {
+                if (!canAccess) {
+                    val target = if (!isLoggedIn) {
+                        AppScreens.LoginScreen.route
+                    } else {
+                        AppScreens.EmailVerificationScreen.route
+                    }
+                    navController.navigate(target) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            }
+
+            if (canAccess) {
+                NoteDetailScreenRoot(
+                    onNavigateBack = { navController.navigateUp() }
+                )
+            }
         }
     }
 }

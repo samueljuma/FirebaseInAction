@@ -191,3 +191,41 @@ ViewModel/screen and match its state ownership — don't reach for `remember` ou
 - Open the date picker, rotate the device → the dialog is still open (was the bug before Gotcha 5's fix).
 - Set a reminder, let it conceptually "fire" (`reminderFiredAt` set by M5 later), then re-schedule it
   to a new time → `reminderFiredAt` resets to `null`.
+
+---
+
+## Milestone 3 — Note deep link
+
+A reminder push should open the *note*, not the generic notification inbox — so it needs its own
+scheme, mirroring the existing `NotificationDeepLinks` pattern exactly:
+
+| | Notification | Note (new) |
+|---|---|---|
+| Object | `core/notifications/NotificationDeepLinks.kt` | `core/notifications/NoteDeepLinks.kt` |
+| URI | `notey://notification?notificationId={id}` | `notey://note?noteId={id}` |
+| Registered | `navDeepLink` on `NotificationsScreen` + manifest `<intent-filter>` | same, on `NoteDetailScreen` |
+
+### Same three places, every deep link
+A deep link needs to be declared in **three** places that must agree: the `PATTERN` constant, the
+`navDeepLink { uriPattern = ... }` on the NavHost `composable(...)`, and the `<intent-filter>` in
+`AndroidManifest.xml` (`android:scheme`/`android:host`). Miss one and the link either 404s at the OS
+level (no intent-filter) or the tap opens the app to the wrong screen (registered in the manifest but
+not in the nav graph).
+
+### Guarding a deep-link-only entry point
+`NoteDetailScreen` is normally only reached through in-app navigation, where the user is already
+authenticated. A deep link can arrive **cold** (app killed, tapped from a notification), so it needs
+the same guard `NotificationsScreen` already has: check `isLoggedIn && isEmailVerified` and redirect to
+the right auth screen if not, instead of trying to render a note for no session.
+
+### Verify (done on a real emulator, not just compiled)
+```
+adb shell am start -a android.intent.action.VIEW -d "notey://note?noteId=test123" <applicationId>
+```
+`dumpsys package <id> | grep -A3 notey` confirmed both `notey://notification` and `notey://note`
+intent-filters are registered. Firing the intent launched `MainActivity` cleanly (`Status: ok`, no
+`FATAL EXCEPTION` in logcat) and landed directly on the **NoteDetail screen** (top bar showing "Note"
+with pin/delete/edit actions) — the auth guard passed because that emulator had an active session.
+With a nonexistent `noteId`, the screen correctly spins forever (`getNoteById` never emits past
+`filterNotNull()`) rather than crashing or showing wrong data — exactly the expected behavior for a
+bogus id.
