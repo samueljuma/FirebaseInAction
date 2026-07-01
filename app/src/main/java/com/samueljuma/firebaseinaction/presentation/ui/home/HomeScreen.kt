@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
@@ -24,8 +25,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,6 +49,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,6 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.samueljuma.firebaseinaction.core.notifications.NotificationPermissionRequester
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.core.utils.toRelativeTimeString
 import com.samueljuma.firebaseinaction.domain.notes.model.Note
@@ -64,8 +71,11 @@ fun HomeScreenRoot(
     viewModel: HomeViewModel = koinViewModel(),
     onNavigateToLogin: () -> Unit,
     onNavigateToCreateNote: () -> Unit,
-    onNavigateToNoteDetail: (String) -> Unit
+    onNavigateToNoteDetail: (String) -> Unit,
+    onNavigateToNotifications: () -> Unit
 ) {
+    // Request Notifications Permission if need be
+    NotificationPermissionRequester()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -84,6 +94,7 @@ fun HomeScreenRoot(
                     )
                 }
             }
+            HomeEvent.NavigateToNotifications -> onNavigateToNotifications()
         }
     }
 
@@ -120,6 +131,25 @@ private fun HomeScreen(
                     }
                 },
                 actions = {
+                    BadgedBox(
+                        badge = {
+                            if (state.unreadCount > 0) {
+                                Badge {
+                                    Text(
+                                        text = if (state.unreadCount > 99) "99+"
+                                               else state.unreadCount.toString()
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = { onAction(HomeAction.OnNotificationsClicked) }) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications"
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = { onAction(HomeAction.OnSignOutClicked) }
                     ) {

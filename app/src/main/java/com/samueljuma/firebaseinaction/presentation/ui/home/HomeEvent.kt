@@ -5,4 +5,5 @@ sealed interface HomeEvent {
     data object NavigateToCreateNote : HomeEvent
     data class NavigateToNoteDetail(val noteId: String) : HomeEvent
     data class ShowSnackbar(val message: UiText) : HomeEvent
+    data object NavigateToNotifications : HomeEvent
 }

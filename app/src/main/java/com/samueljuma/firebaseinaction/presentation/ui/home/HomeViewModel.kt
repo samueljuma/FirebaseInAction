@@ -14,6 +14,8 @@ import com.samueljuma.firebaseinaction.domain.notes.GetNotesUseCase
 import com.samueljuma.firebaseinaction.domain.notes.StartRemoteSyncUseCase
 import com.samueljuma.firebaseinaction.domain.notes.UpdateNoteUseCase
 import com.samueljuma.firebaseinaction.domain.notes.model.Note
+import com.samueljuma.firebaseinaction.domain.notifications.usecases.GetUnreadCountUseCase
+import com.samueljuma.firebaseinaction.domain.notifications.usecases.StartNotificationSyncUseCase
 import com.samueljuma.firebaseinaction.domain.sync.SyncScheduler
 import com.samueljuma.firebaseinaction.presentation.ui.util.MviViewModel
 import kotlinx.coroutines.flow.catch
@@ -29,13 +31,17 @@ class HomeViewModel(
     private val signOutUseCase: SignOutUseCase,
     private val startRemoteSyncUseCase: StartRemoteSyncUseCase,
     private val getCurrentUserSyncUseCase: GetCurrentUserSyncUseCase,
-    private val syncScheduler: SyncScheduler
+    private val syncScheduler: SyncScheduler,
+    private val getUnreadCountUseCase: GetUnreadCountUseCase,
+    private val startNotificationSyncUseCase: StartNotificationSyncUseCase
 ) : MviViewModel<HomeState, HomeAction, HomeEvent>(HomeState()) {
 
     init {
         loadUser()
         observeNotes()
         startSync()
+        observeUnreadCount()
+        startNotificationSync()
     }
 
     private fun loadUser() {
@@ -69,6 +75,21 @@ class HomeViewModel(
             .launchIn(viewModelScope)
     }
 
+    private fun observeUnreadCount() {
+        viewModelScope.launch {
+            getUnreadCountUseCase().collect { count ->
+                updateState { copy(unreadCount = count) }
+            }
+        }
+    }
+
+    private fun startNotificationSync() {
+        startNotificationSyncUseCase()
+            .onEach { }
+            .catch { e -> Timber.tag(TAG).e(e, "Notification sync error") }
+            .launchIn(viewModelScope)
+    }
+
     override fun onAction(action: HomeAction) {
         when (action) {
             HomeAction.OnSignOutClicked -> signOut()
@@ -78,6 +99,8 @@ class HomeViewModel(
                 emitEvent(HomeEvent.NavigateToCreateNote)
             is HomeAction.OnNoteClicked ->
                 emitEvent(HomeEvent.NavigateToNoteDetail(action.noteId))
+            HomeAction.OnNotificationsClicked ->
+                emitEvent(HomeEvent.NavigateToNotifications)
         }
     }
 

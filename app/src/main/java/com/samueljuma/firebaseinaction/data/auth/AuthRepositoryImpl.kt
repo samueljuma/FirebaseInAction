@@ -14,6 +14,8 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import com.samueljuma.firebaseinaction.core.utils.Result
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
+import com.samueljuma.firebaseinaction.domain.notifications.NotificationRepository
+import com.samueljuma.firebaseinaction.domain.notifications.PushTokenRepository
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsEvent
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
@@ -22,7 +24,9 @@ class AuthRepositoryImpl(
     private val firebaseAuth: FirebaseAuth,
     private val sessionStorage: SessionStorage,
     private val crashReporter: CrashReporter,
-    private val analyticsTracker: AnalyticsTracker
+    private val analyticsTracker: AnalyticsTracker,
+    private val pushTokenRepository: PushTokenRepository,
+    private val notificationRepository: NotificationRepository
 ) : AuthRepository {
 
     override val currentUser: Flow<User?> = callbackFlow {
@@ -54,6 +58,11 @@ class AuthRepositoryImpl(
         analyticsTracker.logEvent(
             AnalyticsEvent.SignUpCompleted(AnalyticsEvent.SignInMethod.EMAIL)
         )
+
+        // Capture and save FCM token now that we have a session
+        pushTokenRepository.getCurrentToken()?.let { token ->
+            pushTokenRepository.saveTokenForCurrentUser(token)
+        }
         user
 
     }
@@ -74,6 +83,11 @@ class AuthRepositoryImpl(
         analyticsTracker.logEvent(
             AnalyticsEvent.SignInCompleted(AnalyticsEvent.SignInMethod.EMAIL)
         )
+
+        // Capture and save FCM token now that we have a session
+        pushTokenRepository.getCurrentToken()?.let { token ->
+            pushTokenRepository.saveTokenForCurrentUser(token)
+        }
         user
     }
 
@@ -84,6 +98,7 @@ class AuthRepositoryImpl(
         // from an unexpected token expiry (session still present). Reversing the order
         // would cause observeTokenExpiry() to incorrectly show the SessionExpiredDialog.
         sessionStorage.clear()
+        notificationRepository.clearLocalData()
         crashReporter.clearUser()
         analyticsTracker.reset()
         firebaseAuth.signOut()
@@ -102,6 +117,12 @@ class AuthRepositoryImpl(
         analyticsTracker.logEvent(
             AnalyticsEvent.SignInCompleted(AnalyticsEvent.SignInMethod.GOOGLE)
         )
+
+        // Capture and save FCM token now that we have a session
+        pushTokenRepository.getCurrentToken()?.let { token ->
+            pushTokenRepository.saveTokenForCurrentUser(token)
+        }
+
         user
     }
 

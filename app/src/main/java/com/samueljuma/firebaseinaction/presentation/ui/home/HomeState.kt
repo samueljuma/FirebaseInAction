@@ -6,5 +6,6 @@ import com.samueljuma.firebaseinaction.domain.notes.model.Note
 data class HomeState(
     val notes: List<Note> = emptyList(),
     val isLoading: Boolean = false,
-    val loggedInUser: User? = null
+    val loggedInUser: User? = null,
+    val unreadCount: Int = 0
 )

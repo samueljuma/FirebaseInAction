@@ -13,6 +13,9 @@ import com.samueljuma.firebaseinaction.core.utils.onError
 import com.samueljuma.firebaseinaction.domain.auth.usecases.GetSessionUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.ReloadCurrentUserUseCase
 import com.samueljuma.firebaseinaction.domain.auth.usecases.SignOutUseCase
+import com.samueljuma.firebaseinaction.core.notifications.InAppNotificationBus
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -28,8 +31,11 @@ class MainViewModel(
     var state by mutableStateOf(MainState())
         private set
 
+    private var autoDismissJob: Job? = null
+
     init {
         checkAuthState()
+        observeInAppNotifications()
     }
 
     private fun checkAuthState() {
@@ -116,6 +122,24 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    private fun observeInAppNotifications() {
+        viewModelScope.launch {
+            InAppNotificationBus.events.collect { notification ->
+                autoDismissJob?.cancel()
+                state = state.copy(activeNotification = notification)
+                autoDismissJob = launch {
+                    delay(8_000)
+                    state = state.copy(activeNotification = null)
+                }
+            }
+        }
+    }
+
+    fun onDismissNotification() {
+        autoDismissJob?.cancel()
+        state = state.copy(activeNotification = null)
     }
 
     fun onSessionExpiredDismissed() {

@@ -4,6 +4,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+fun Long.toFullTimestampString(): String {
+    val sdf = SimpleDateFormat("EEE, dd MMM yyyy h:mm a", Locale.getDefault())
+    return sdf.format(Date(this)).replace("AM", "am").replace("PM", "pm")
+}
+
 fun Long.toRelativeTimeString(): String {
     val now = System.currentTimeMillis()
     val diff = now - this

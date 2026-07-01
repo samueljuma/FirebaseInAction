@@ -9,4 +9,7 @@ sealed class AppScreens(val route: String) {
         fun createRoute(noteId: String) = "note_detail_screen/$noteId"
     }
     object EmailVerificationScreen : AppScreens("email_verification_screen")
+    object NotificationsScreen : AppScreens("notifications_screen?notificationId={notificationId}") {
+        fun createRoute(notificationId: String) = "notifications_screen?notificationId=$notificationId"
+    }
 }
