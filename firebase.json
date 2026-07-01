@@ -11,7 +11,18 @@
   "remoteconfig": {
     "template": "remote_config.json"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "python312"
+    }
+  ],
   "emulators": {
+    "functions": {
+      "port": 5001,
+      "host": "0.0.0.0"
+    },
     "auth": {
       "port": 9099,
       "host": "0.0.0.0"
