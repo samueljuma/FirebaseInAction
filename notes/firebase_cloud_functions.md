@@ -460,3 +460,80 @@ running before assuming the backend is wrong.
 4. **On-device: the in-app banner appeared, and tapping it opened the correct note** — the full chain
    (reminder → scheduled scan → data-only push → `onMessageReceived` → banner → deep link → note) working
    end to end, on a real device, for real.
+
+---
+
+## Addendum — handling FCM *notification* messages too (not a numbered milestone)
+
+The reminder track only ever sends **data-only** FCM messages. This addendum makes the client cope
+gracefully if a **notification** message ever arrives — e.g. a Firebase Console "Campaign," which is
+built entirely around the `notification` payload (title/body), not `data`.
+
+### The mechanic everything here is built on
+If `RemoteMessage.notification != null`, Android's FCM SDK **auto-displays it via the system tray and
+never calls `onMessageReceived()`** while the app is backgrounded/killed — an OS/SDK-level behavior, not
+overridable from app code. Data-only messages (what reminders send) always invoke `onMessageReceived()`,
+foreground or background — that's *why* reminders were built data-only in the first place (M4's
+motivation, way back at the start of this track).
+
+**Consequence, and why the change is small:** the background branch of `onMessageReceived`
+(`notificationDisplayer.show(...)`) is *structurally* only ever reached for data-only messages — a
+message with a `notification` block never gets there while backgrounded. So this addendum only needed
+to touch the **foreground** path and the **manifest** (for the background auto-display's channel) — not
+the background code at all.
+
+### `FcmPayloadKind { DATA, DISPLAY }` — transient, not persisted
+Added to `AppNotification`, derived once in `onMessageReceived` (`DISPLAY` when
+`message.notification != null`), used only to pick display/tap behavior. **Deliberately not added to
+the Room entity or Firestore DTO** — no migration. Persisted inbox rows are always `DATA` by
+construction: reminders are the only thing ever written to `/users/{uid}/notifications`, and only the
+Cloud Function (Admin SDK) can create that doc — `firestore.rules` has `allow create: if false` for the
+client specifically to prevent it authoring its own entries (the M4 redesign). A campaign has no
+server-side Firestore write at all, so there's nothing to persist for it, full stop — reopening `create`
+to let the client persist campaign taps would undo that fix for a use case (marketing/ad-hoc campaigns
+for a personal notes app) that doesn't obviously need durability anyway.
+
+### Content resolution: prefer `message.notification` for `DISPLAY`
+Before this, `onMessageReceived` only ever read `message.data` — a Console campaign with no custom data
+fields would show the generic fallback text ("Notey" / "This is a sample body...") instead of what was
+actually typed into the Console. Fixed by preferring `message.notification?.title`/`?.body`, falling
+back to `data[...]`, then the generic strings — `DATA`-kind messages are unaffected (they never set
+`message.notification` at all).
+
+### The tap-navigation bug found and avoided during design
+The obvious move — reuse the same `deepLink ?: NotificationDeepLinks.uri(id)` fallback the reminder
+banner already uses — turns out to be broken for a `DISPLAY` message. That fallback navigates to the
+notifications screen with the tapped id; `NotificationsViewModel` queues that id into `pendingReadIds`
+→ `markNotificationReadUseCase` → Firestore `.update("read", true)` on it when the screen closes.
+Firestore's `update()` requires the document to already exist — and a campaign's id was never
+persisted — so this would be a **guaranteed `NOT_FOUND` failure on every single campaign tap**
+(harmless, caught by `firestoreSafeCall`, but real, wasted, and pure noise). Caught by tracing the
+actual call chain rather than accepting "reuse the existing route" at face value.
+
+**Fix:** `DISPLAY`-kind taps dismiss and navigate to **Home** instead — a real destination (not a dead
+end — a plain "just dismiss, nothing happens" was considered and rejected: it's inconsistent with the
+backgrounded case, where tapping the OS-auto-displayed notification *does* open the app) that completely
+avoids the notifications route and its phantom mark-as-read.
+
+### One-line manifest fix for the background auto-display
+Without `com.google.firebase.messaging.default_notification_channel_id` set, a backgrounded `DISPLAY`
+message would auto-display in FCM's own default **"Miscellaneous"** channel — not our
+`general_notifications` channel — inconsistent branding and settings-grouping for the user. Added the
+meta-data (value must stay in sync with `NotificationChannels.GENERAL_CHANNEL_ID` — no shared source of
+truth between the manifest and the Kotlin constant, so this is a manual-sync point to remember).
+
+### A methodology note worth keeping
+A design-review pass (via a Plan-mode critique agent) correctly flagged that "just dismiss, do nothing"
+was a worse dead-end than *something* happening on tap, and proposed reusing the existing inbox
+fallback as the fix. That specific suggestion turned out to be buggy on closer inspection (the phantom
+`markAsRead` above) — a good reminder that a second opinion is valuable for catching blind spots, but
+its *specific* proposed fix still needs to be traced through the actual code before trusting it.
+
+### Verify
+- `compileDevDebugKotlin` / `assembleDevDebug` succeed; manifest merges clean.
+- Only two `AppNotification(...)` construction sites exist in the codebase (`AppFirebaseMessagingService.kt`
+  and `InAppNotificationBanner.kt`'s preview), both all-named-args — confirmed the new defaulted `kind`
+  field breaks neither.
+- (Runtime, when convenient) send a real Console test campaign: foreground shows the real title/body and
+  tapping lands on Home; backgrounded, the system notification appears in **General Notifications**, not
+  "Miscellaneous." Send a reminder afterward and confirm it's completely unaffected.
