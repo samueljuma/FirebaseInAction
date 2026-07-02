@@ -114,6 +114,10 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
+    // Plain implementation (not debugImplementation): the runtime BuildConfig.DEBUG gate in
+    // FirebaseInActionApp references DebugAppCheckProviderFactory from main sources, so the
+    // class must be on the release compile classpath even though it's never installed there.
+    implementation(libs.firebase.appcheck.debug)
     implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.bundles.koin)

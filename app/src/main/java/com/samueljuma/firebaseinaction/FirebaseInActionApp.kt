@@ -3,6 +3,9 @@ package com.samueljuma.firebaseinaction
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.samueljuma.firebaseinaction.core.di.appModules
 import com.samueljuma.firebaseinaction.core.emulator.FirebaseEmulatorConfig
 import com.samueljuma.firebaseinaction.core.lifecycle.AppForegroundTracker
@@ -29,6 +32,20 @@ class FirebaseInActionApp : Application() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
+
+        // 0. App Check FIRST — before anything touches a Firebase service (emulator config,
+        // Koin-built repositories, the FCM token resync below), so every request carries an
+        // attestation token. Debug builds use the Debug provider (prints a token to logcat that
+        // must be registered in the console); release builds attest via Play Integrity.
+        FirebaseAppCheck.getInstance().apply {
+            installAppCheckProviderFactory(
+                if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance()
+                else PlayIntegrityAppCheckProviderFactory.getInstance()
+            )
+            // Explicit: auto-refresh otherwise follows the Analytics collection setting,
+            // which this project toggles per flavor (disabled under USE_EMULATOR).
+            setTokenAutoRefreshEnabled(true)
+        }
 
         AppForegroundTracker.init()
         NotificationChannels.createChannels(this)
