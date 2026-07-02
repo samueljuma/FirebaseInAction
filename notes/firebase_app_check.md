@@ -112,3 +112,56 @@ After registration, relaunched both builds and checked logcat:
 The console's App Check screens had changed from the steps as originally written (flows re-skinned,
 same shape: Apps tab → app → attestation provider → Registered). Console instructions age fast —
 navigate by concept (register provider, manage debug tokens, enforce per-service), not by pixel.
+
+---
+
+## Milestone 2 — Enforcement, proven both ways
+
+Enforcement enabled in the console for **Cloud Firestore and Cloud Storage only** (instantly
+reversible toggles). Not Functions — the only function is *scheduled*, not callable/HTTP, so App Check
+never applies to it; its Admin SDK writes bypass App Check (and rules) entirely, by design. Not
+Auth/RC — scope kept tight. Same-day enforcement was fine for a single-dev app: monitoring mode exists
+to discover unknown legitimate clients, and there were none. (Console metrics lag hours — verify by
+functional testing, not dashboards.)
+
+### Positive proof — attested app under enforcement
+On the physical device (prodDebug, registered token): startup alone exercises the enforced services —
+`Remote sync: processed 7 remote notes`, `Synced 2 notifications`, zero errors — and a note cover
+image upload succeeded (Storage path). Business as usual, because the install is attested.
+
+### Negative proof — the payoff demo
+The elegant realization: **no un-registering needed.** Debug tokens are per-install, so
+`pm clear` alone mints a brand-new, unregistered token — the device becomes an "unknown app" in one
+step. Then, after signing back in (Auth is *not* enforced, so sign-in succeeds):
+
+```
+Firestore: Write failed at users/<uid>: PERMISSION_DENIED
+NoteRepository: Firestore listener error ... PERMISSION_DENIED
+NotificationRepo: Firestore listener error ... PERMISSION_DENIED
+```
+
+The sharpest teaching moment of the track: a **fully authenticated user**, making requests that pass
+the security rules (owner-scoped, verified earlier the same day), rejected on every Firestore surface —
+purely because the app *install* isn't attested. Attestation is evaluated **before** rules ever run;
+they're independent gates.
+
+Registering the freshly-minted token in the console and relaunching restored everything instantly
+(7 notes + 2 notifications syncing again, zero errors). Rejection → one console entry → recovery.
+
+### What enforcement means for the rest of the stack
+| Component | Under enforcement |
+|---|---|
+| prodDebug w/ registered token | Works (attested via Debug provider) |
+| devDebug on AVD → local emulators | Unaffected — emulators never enforce App Check |
+| Scheduled reminder function | Unaffected — Admin SDK bypasses App Check |
+| FCM pushes | Unaffected — FCM isn't an enforced surface here |
+| `prodRelease` sideloaded via adb | **Would fail** — Play Integrity only attests Play-distributed installs; truly testing the release path needs a Play internal-testing track |
+| Stolen `google-services.json` + script | Blocked — the entire point |
+
+### The one honest gap
+The Play Integrity (`else`) branch of the provider install is effectively **untestable without Play
+distribution**. Every build we can run locally is a debug build using the Debug provider. Documented
+rather than solved: the day Notey ships to a Play track, the release path gets its first real
+attestation — and if something's wrong (e.g. missing SHA-256), enforcement would brick release users,
+which is why the console's per-service *metrics* (verified vs unverified breakdown) are worth a glance
+before enforcing in a real production rollout.
