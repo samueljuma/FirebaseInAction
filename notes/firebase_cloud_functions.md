@@ -291,3 +291,75 @@ plural, still used), and the domain mapper `AppNotification.toEntity()`.
 - `compileDevDebugKotlin` / `assembleDevDebug` succeed.
 - (Runtime, once M5 exists) A reminder push shows the banner/heads-up and tapping it opens the
   **note**, not the inbox; a generic push (if any) still opens the inbox as before.
+
+---
+
+## Milestone 5 — The reminder producer (scheduled function)
+
+`functions/main.py`: `check_due_reminders`, a **scheduled** function (`@scheduler_fn.on_schedule`,
+`* * * * *` — every minute) that scans for due, unfired reminders across every user and delivers each
+through `deliver_notification(...)` — the reusable seam any future server-side producer would call.
+
+### The query: a collection-group scan
+```python
+db.collection_group("notes")
+    .where(filter=FieldFilter("reminderFiredAt", "==", None))
+    .where(filter=FieldFilter("reminderAt", "<=", now))
+    .stream()
+```
+`collection_group("notes")` searches every `notes` subcollection under every `users/{uid}` — a single
+query across all users, not one per user. Two filters on different fields (one equality, one
+inequality) on a **collection group** always needs an explicit composite index — added to
+`firestore.indexes.json` as `reminderFiredAt ASC, reminderAt ASC` (equality field first, by
+convention). The emulator doesn't enforce this (it auto-indexes everything for convenience); **production
+does** — this index must exist before `check_due_reminders` can query for real (M6).
+
+### Why mark fired *before* attempting delivery
+```python
+note_doc.reference.update({"reminderFiredAt": reminder_at})
+# ...then attempt delivery, catching failures
+```
+If delivery failed and we *hadn't* marked it fired yet, next minute's scan would pick the same note
+back up and retry forever. Marking fired first gives "attempt once" semantics: a bad token or transient
+send error is logged and the reminder is still considered handled, rather than spammed at every scan.
+
+### Idempotent doc ids, not auto-generated ones
+`notification_id = f"{note_id}_{reminder_at}"` — deterministic, not `db.collection(...).add(...)`'s
+random id. This is what makes a duplicate invocation harmless: writing to the *same* doc id twice is
+just an overwrite with identical data, not a second row in the inbox.
+
+### `deliver_notification()` as the shared seam
+Splits the query/scan loop from the actual "write the doc, send the push" work — the same pattern this
+whole track has been using client-side (`FeatureFlags`, `AppFirebaseMessagingService`): keep the
+*producer* (what decides to notify) separate from the *delivery* mechanics. A future producer (e.g. a
+scheduled inactivity check) would call the same `deliver_notification()` instead of duplicating the
+Firestore-write + FCM-send pairing.
+
+### Real emulator test (not just "it imports") — including a genuine at-least-once proof
+Ran `firebase emulators:start --only functions,firestore,pubsub` (scheduled/pubsub functions need the
+Pub/Sub emulator, added to `firebase.json`). Seeded a due-and-unfired note directly via the raw
+`google.cloud.firestore.Client` (the `FIRESTORE_EMULATOR_HOST` env var makes it bypass credentials —
+`firebase_admin.firestore.client()` insists on real Application Default Credentials even against the
+emulator, so it's the wrong tool for a throwaway seed script; the raw client is the standard workaround).
+Triggered the schedule manually via the emulator's HTTP endpoint:
+```
+curl -X POST http://localhost:5001/<project>/us-central1/check_due_reminders-0
+```
+(The emulator names the manually-triggerable HTTP wrapper `<function>-0`; it publishes to Pub/Sub,
+which the real `check_due_reminders` then consumes — hence two log entries per trigger.)
+
+**Result:** the manual trigger logged `processed 1 due reminder(s)` and, correctly, `No fcmToken for
+user testuser123 — inbox doc written, push skipped` (graceful handling of a user with no registered
+device). Pub/Sub then **redelivered the same message** on its own (realistic — Pub/Sub is
+at-least-once, never exactly-once) — a second, unprompted execution logged `processed 0 due
+reminder(s)`, because the first run had already stamped `reminderFiredAt`. Reading Firestore back
+afterward confirmed exactly **one** notification doc (`testnote1_<reminderAt>`, matching the idempotent
+id scheme) despite the two invocations, and `reminderFiredAt == reminderAt` on the note. This is the
+idempotency design working under a real duplicate-delivery scenario, not just a "run it twice
+manually" test.
+
+### Another `.gitignore` gap, same shape as `remote_config.json`
+`firestore.indexes.json` — now holding the composite index this milestone's query depends on in
+production — had **never** been tracked: caught by the same blanket `*.json` rule fixed for
+`remote_config.json`/`firebase.json` in M0. Added `!firestore.indexes.json`. Also ignored the new
+`pubsub-debug.log` the Pub/Sub emulator writes to the repo root.
