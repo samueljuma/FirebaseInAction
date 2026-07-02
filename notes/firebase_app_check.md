@@ -73,3 +73,42 @@ the bundle stays "things every build actually uses."
   - AVD (devDebug → `.dev` app)
 - Nothing is enforced yet, so the app behaves identically — the tokens minted here get registered in
   the console in M1.
+
+---
+
+## Milestone 1 — Console registration
+
+Console-only milestone (no code). Three registrations, in order:
+
+1. **SHA-256 fingerprints** (Project settings → General, per app): both the debug keystore's and the
+   release keystore's SHA-256, on *both* Android apps. Pulled via `./gradlew :app:signingReport` —
+   the debug keystore is shared by all debug builds; the release keystore covers release builds.
+2. **Play Integrity provider** (App Check → Apps tab): registered on both apps → status "Registered".
+3. **Debug tokens** (⋮ → Manage debug tokens, per app): each install's logcat-minted secret,
+   registered under its **matching** app — physical device's token under the prod app, AVD's under
+   the `.dev` app. Cross-registering silently fails.
+
+### Where debug tokens come from (common confusion)
+The Debug provider mints a **random per-install UUID on first run** and prints it to logcat:
+```
+DebugAppCheckProvider: Enter this debug secret into the allow list in the Firebase Console...
+```
+The app invents the secret; the console registration says "trust this one install." Clearing app
+data, reinstalling, or recreating the AVD mints a **new** secret that must be re-registered — a
+recurring dev-loop annoyance to expect, not a bug.
+
+### Verification, and what "success" looks like
+After registration, relaunched both builds and checked logcat:
+- **Physical (prodDebug): silence.** No token-exchange errors — the SDK doesn't log successful
+  exchanges, so *absence* of the earlier failure spam is the success signal.
+- **AVD (devDebug):** `Unable to resolve host "firebaseappcheck.googleapis.com"` — the emulator's
+  internet/DNS was down (AVD flakiness; cold reboot fixes it), which surfaced two lessons:
+  - The Debug provider **always needs the live App Check backend**, even when Firestore/Auth point
+    at local emulators — there is no App Check emulator.
+  - When it can't reach it, the SDK degrades to a **placeholder token** and requests still flow.
+    Harmless for the dev flavor: the local emulators never enforce App Check anyway.
+
+### Console UI drift
+The console's App Check screens had changed from the steps as originally written (flows re-skinned,
+same shape: Apps tab → app → attestation provider → Registered). Console instructions age fast —
+navigate by concept (register provider, manage debug tokens, enforce per-service), not by pixel.
