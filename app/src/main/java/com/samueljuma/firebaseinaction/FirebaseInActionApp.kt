@@ -10,6 +10,7 @@ import com.samueljuma.firebaseinaction.core.logging.CrashReportingTree
 import com.samueljuma.firebaseinaction.core.notifications.NotificationChannels
 import com.samueljuma.firebaseinaction.domain.auth.AuthRepository
 import com.samueljuma.firebaseinaction.domain.config.FeatureFlags
+import com.samueljuma.firebaseinaction.domain.notifications.PushTokenRepository
 import com.samueljuma.firebaseinaction.domain.observability.AnalyticsTracker
 import com.samueljuma.firebaseinaction.domain.observability.CrashReporter
 import kotlinx.coroutines.CoroutineScope
@@ -61,6 +62,17 @@ class FirebaseInActionApp : Application() {
             ?.let {
                 koin.get<CrashReporter>().setUser(it)
                 koin.get<AnalyticsTracker>().identify(it.uid)
+
+                // Re-sync the FCM token for this returning user. signUp/signIn/signInWithGoogle
+                // only capture the token at the moment of that explicit call — a persisted
+                // session (the common case on relaunch) never re-executes those, so without this
+                // the token in Firestore can silently go missing/stale and pushes stop arriving.
+                applicationScope.launch {
+                    val pushTokenRepository = koin.get<PushTokenRepository>()
+                    pushTokenRepository.getCurrentToken()?.let { token ->
+                        pushTokenRepository.saveTokenForCurrentUser(token)
+                    }
+                }
             }
 
         // 6. Warm Remote Config — resolving FeatureFlags applies in-app defaults, publishes any

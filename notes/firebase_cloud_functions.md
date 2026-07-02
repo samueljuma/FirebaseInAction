@@ -363,3 +363,100 @@ manually" test.
 production — had **never** been tracked: caught by the same blanket `*.json` rule fixed for
 `remote_config.json`/`firebase.json` in M0. Added `!firestore.indexes.json`. Also ignored the new
 `pubsub-debug.log` the Pub/Sub emulator writes to the repo root.
+
+---
+
+## Milestone 6 — Deploy + real end-to-end (three real bugs found and fixed)
+
+The final milestone: `firebase deploy --only functions,firestore:indexes,firestore:rules` (Blaze was
+already enabled) got `check_due_reminders` live, then a genuine on-device test — set a reminder, wait
+for the push — surfaced three separate, real problems. None were hypothetical; each blocked the actual
+verification until fixed. Documenting the debugging path, not just the fixes, because the *reasoning*
+is the reusable part.
+
+### Bug 1 — `functions:log --only <name>` silently drops everything (CLI, not our code)
+Filtering the deploy's own logs by function name (`functions:log --only check_due_reminders`) returned
+only the two deployment audit-log lines, no matter how long we waited — looking exactly like "the
+scheduler never fires." Dropping `--only` and grepping the full, unfiltered log revealed the function
+had actually been running every minute the whole time. **Lesson:** when a log filter shows suspiciously
+*nothing*, suspect the filter before the system — pull unfiltered logs first.
+
+### Bug 2 — the real root cause: no Firestore rule for the parent `users/{userId}` doc
+Once real logs were visible, they were unambiguous: `No fcmToken for user <uid> — inbox doc written,
+push skipped`, on every single run the reminder was due. The Firestore write (inbox doc + Room sync)
+succeeded — that's what made it *look* like everything worked from the app's side — but the actual push
+was never attempted because the server found no token.
+
+Tracing why the token was missing led to `firestore.rules`: it only ever had rules for the
+**subcollections** `users/{userId}/notes/{noteId}` and `users/{userId}/notifications/{notificationId}`
+— never for the **parent** `users/{userId}` document itself, which is exactly what
+`PushTokenRepositoryImpl.saveTokenForCurrentUser()` writes `fcmToken` to. With no matching rule, that
+write fell through to the file's own deny-all catch-all (`match /{document=**} { allow read, write: if
+false; }`) and was silently rejected — confirmed directly in `adb logcat`:
+```
+Firestore: Write failed at users/<uid>: PERMISSION_DENIED
+```
+This wasn't introduced by this milestone track — it's as old as `PushTokenRepositoryImpl` itself, just
+never surfaced because nothing before now depended on that field actually being readable server-side.
+**Fixed** by adding an owner-scoped rule for the parent doc (matching the pattern already used
+elsewhere, deliberately *without* the `notes` block's email-verification gate — token capture happens
+right after signup, potentially before verification completes).
+```
+match /users/{userId} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+```
+**Lesson:** a Firestore security rule for a subcollection path grants nothing on its parent document —
+each `match` pattern is independent. A write to a path with no matching rule is denied by the catch-all,
+*silently* from the app's perspective (no crash — `firestoreSafeCall` just swallows it into a logged
+`Result.Error`) — this class of bug hides behind working-looking UI unless you check `adb logcat` or
+the Firebase Console's own request logs.
+
+### Bug 3 — the token is only ever captured at explicit sign-in (fix, not a bug in isolation, but what surfaced Bug 2)
+Even with rules fixed, the token still wouldn't be there for anyone who was *already* signed in via a
+persisted session — `saveTokenForCurrentUser()` is only called from `onNewToken()` (rare — new/rotated
+token only) and from inside `signUp()`/`signIn()`/`signInWithGoogle()` (only at that exact call). A
+persisted session (`SessionStorage` + Firebase Auth's own local persistence) means the app can restore
+a logged-in user on cold start **without ever calling those methods again** — so the token can go
+stale or missing indefinitely for a returning user, with no code path to notice or fix it.
+
+**Fixed** in `FirebaseInActionApp.onCreate()`, in the same block that already re-tags Crashlytics/
+Analytics for a returning user on startup — added a token resync there, on the existing
+`applicationScope`:
+```kotlin
+koin.get<AuthRepository>().getCurrentUserSync()?.let {
+    // ...existing Crashlytics/Analytics re-tag...
+    applicationScope.launch {
+        val pushTokenRepository = koin.get<PushTokenRepository>()
+        pushTokenRepository.getCurrentToken()?.let { token ->
+            pushTokenRepository.saveTokenForCurrentUser(token)
+        }
+    }
+}
+```
+**Lesson:** "capture the token at sign-in" is necessary but not sufficient — a persisted-login app also
+needs a "resync on every startup" path, or the token silently rots for exactly the users who never
+explicitly sign in again (i.e. almost everyone, most of the time).
+
+### Aside — verify the right build variant against the right backend
+Mid-debugging, a `devDebug` build (Firestore/Auth pointed at **local emulators** via
+`FirebaseEmulatorConfig`) got installed on the physical device that had actually been running
+`prodDebug` (the real, deployed backend) the whole time — an easy mistake once multiple devices/
+emulators and multiple flavors are in play. `dev` and `prod` have distinct `applicationId`s
+(`.dev` suffix vs none), so they install as separate apps rather than overwriting each other, which
+makes the mix-up easy to miss. Corrected by explicitly building/installing `assembleProdDebug` +
+`adb install` targeted at that specific device serial. **Lesson:** when a device's behavior doesn't
+match what the backend logs say, check which build variant — and therefore which backend — is actually
+running before assuming the backend is wrong.
+
+### Final verification — real reminder, real push, real device
+1. Deployed `functions,firestore:indexes,firestore:rules` to `fir-inaction-dev-e7b23` (`check_due_reminders`
+   confirmed `ACTIVE` via `firebase functions:list`); ran `functions:artifacts:setpolicy` to fix a
+   cleanup-policy warning (old container images would otherwise accumulate a small storage cost).
+2. Fixed the two real bugs above; redeployed just `firestore:rules`; relaunched `prodDebug` on the
+   physical device — confirmed via `adb logcat` that the earlier `PERMISSION_DENIED` was gone.
+3. Set a fresh reminder ~2 minutes out. The next scheduled run logged `processed 1 due reminder(s)`
+   with **no** "No fcmToken" warning — the send was actually attempted.
+4. **On-device: the in-app banner appeared, and tapping it opened the correct note** — the full chain
+   (reminder → scheduled scan → data-only push → `onMessageReceived` → banner → deep link → note) working
+   end to end, on a real device, for real.
