@@ -56,6 +56,8 @@ firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashly
 firebase-config = { group = "com.google.firebase", name = "firebase-config" }
 firebase-perf = { group = "com.google.firebase", name = "firebase-perf" }
 firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "firebase-appcheck-playintegrity" }
+# Deliberately NOT in the firebase bundle: only installed at runtime when BuildConfig.DEBUG
+firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
 
 #dependency injection - koin
 koin-core = { module ="io.insert-koin:koin-core", version.ref = "koin"}
