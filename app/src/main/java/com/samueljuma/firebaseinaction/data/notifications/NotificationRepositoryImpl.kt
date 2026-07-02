@@ -8,12 +8,10 @@ import com.samueljuma.firebaseinaction.core.utils.firestoreSafeCall
 import com.samueljuma.firebaseinaction.data.notifications.local.NotificationDao
 import com.samueljuma.firebaseinaction.data.notifications.local.NotificationEntity
 import com.samueljuma.firebaseinaction.data.notifications.remote.NotificationDto
-import com.samueljuma.firebaseinaction.data.notifications.remote.toDto
 import com.samueljuma.firebaseinaction.data.notifications.remote.toEntity as dtoToEntity
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notifications.NotificationRepository
 import com.samueljuma.firebaseinaction.domain.notifications.mapper.toDomain
-import com.samueljuma.firebaseinaction.domain.notifications.mapper.toEntity
 import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -42,15 +40,6 @@ class NotificationRepositoryImpl(
 
     override fun getUnreadCount(): Flow<Int> =
         notificationDao.getUnreadCount()
-
-    override suspend fun saveNotification(notification: AppNotification): Result<Unit, DataError> =
-        firestoreSafeCall {
-            notificationDao.upsertNotification(notification.toEntity())
-            val userId = getCurrentUserId()
-            notificationsCollection(userId).document(notification.id)
-                .set(notification.toDto())
-                .await()
-        }
 
     override suspend fun markAsRead(notificationId: String): Result<Unit, DataError> =
         firestoreSafeCall {

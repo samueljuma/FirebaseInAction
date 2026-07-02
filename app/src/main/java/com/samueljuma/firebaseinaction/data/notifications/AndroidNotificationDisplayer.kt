@@ -22,7 +22,13 @@ class AndroidNotificationDisplayer(
     private val context: Context
 ) : NotificationDisplayer {
 
-    override fun show(notificationId: String, title: String, body: String, data: Map<String, String>) {
+    override fun show(
+        notificationId: String,
+        title: String,
+        body: String,
+        data: Map<String, String>,
+        deepLink: String?
+    ) {
         val hasPermission = ContextCompat.checkSelfPermission(
             context, Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
@@ -38,7 +44,7 @@ class AndroidNotificationDisplayer(
             .setSmallIcon(R.drawable.ic_notey_logo)
             .setContentTitle(title)
             .setContentText(body)
-            .setContentIntent(deepLinkPendingIntent(notificationId))
+            .setContentIntent(deepLinkPendingIntent(notificationId, deepLink))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
@@ -49,18 +55,16 @@ class AndroidNotificationDisplayer(
 
     /**
      * PendingIntent that fires the in-app deep link when the system notification
-     * is tapped. TaskStackBuilder synthesizes a proper back stack (Home ->
-     * Notifications) so Back returns to the app's home, and works from a cold
-     * start — the Navigation graph parses the URI and hands `notificationId` to
-     * the destination's SavedStateHandle.
+     * is tapped. Defaults to the notifications inbox, but honors a specific
+     * [deepLink] (e.g. a reminder's note) when the sender supplied one.
+     * TaskStackBuilder synthesizes a proper back stack (Home -> destination) so
+     * Back returns to the app's home, and works from a cold start — the
+     * Navigation graph parses the URI and hands the id to the destination's
+     * SavedStateHandle.
      */
-    private fun deepLinkPendingIntent(notificationId: String): PendingIntent {
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            NotificationDeepLinks.uri(notificationId).toUri(),
-            context,
-            MainActivity::class.java
-        )
+    private fun deepLinkPendingIntent(notificationId: String, deepLink: String?): PendingIntent {
+        val uri = (deepLink ?: NotificationDeepLinks.uri(notificationId)).toUri()
+        val intent = Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java)
 
         return TaskStackBuilder.create(context).run {
             addNextIntentWithParentStack(intent)

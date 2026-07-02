@@ -51,8 +51,23 @@ service cloud.firestore {
     }
 
     match /users/{userId}/notifications/{notificationId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      allow read: if isOwner();
+
+      // Notifications are authored server-side only — Cloud Functions write them via the
+      // Admin SDK, which bypasses these rules entirely. The client never creates its own
+      // inbox entries (that was the old, since-removed behaviour).
+      allow create: if false;
+
+      // Clients may mark their own notifications read, and nothing else.
+      allow update: if isOwner()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+                    && request.resource.data.read == true;
+
+      allow delete: if isOwner();
     }
 
     match /{document=**} {

@@ -8,13 +8,6 @@ fun NotificationEntity.toDomain() = AppNotification(
     title = title,
     body = body,
     receivedAt = receivedAt,
-    read = read
-)
-
-fun AppNotification.toEntity() = NotificationEntity(
-    id = id,
-    title = title,
-    body = body,
-    receivedAt = receivedAt,
-    read = read
+    read = read,
+    deepLink = deepLink
 )

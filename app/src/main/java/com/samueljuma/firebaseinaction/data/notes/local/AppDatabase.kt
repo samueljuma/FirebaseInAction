@@ -9,7 +9,7 @@ import com.samueljuma.firebaseinaction.data.notifications.local.NotificationEnti
 
 @Database(
     entities = [NoteEntity::class, NotificationEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -78,6 +78,13 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE notes ADD COLUMN reminderAt INTEGER DEFAULT NULL")
                 db.execSQL("ALTER TABLE notes ADD COLUMN reminderFiredAt INTEGER DEFAULT NULL")
+            }
+        }
+        // Notifications now carry where a tap should navigate (e.g. a reminder's note),
+        // instead of always opening the generic inbox.
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notifications ADD COLUMN deepLink TEXT DEFAULT NULL")
             }
         }
     }

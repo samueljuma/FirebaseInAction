@@ -229,3 +229,65 @@ with pin/delete/edit actions) — the auth guard passed because that emulator ha
 With a nonexistent `noteId`, the screen correctly spins forever (`getNoteById` never emits past
 `filterNotNull()`) rather than crashing or showing wrong data — exactly the expected behavior for a
 bogus id.
+
+---
+
+## Milestone 4 — Client consumes server-authored data messages
+
+The architectural inversion this whole track has been building to: **the client stops writing
+notifications, the server starts.**
+
+### The old flow (client-authored)
+`onMessageReceived` built an `AppNotification` from any push's `data` and called
+`notificationRepository.saveNotification(...)`, which wrote to **both** Room and Firestore. This made
+sense when the client was the only thing that ever created inbox entries.
+
+### The new flow (server-authored)
+The Cloud Function (M5) will write the Firestore doc **first**, then send the push as a
+notification-only *signal*. The client's job is now only to **display** what arrives — the existing
+`StartNotificationSyncUseCase` listener (already running) picks up the server-written doc and syncs it
+into Room automatically. `AppFirebaseMessagingService.onMessageReceived` no longer touches
+`NotificationRepository` at all — the injection was removed along with the call.
+
+### Why not keep both writers "just in case"?
+Two things make dual-writing actively wrong, not just redundant:
+1. **Same-document race.** If the client also `.set()`s the doc the function just created, that's two
+   writers touching one document — the exact hazard server-authorship exists to remove.
+2. **`firestore.rules` now forbids it.** Tightened `/users/{uid}/notifications` to
+   `allow create: if false` — only the Admin SDK (which bypasses rules entirely) can create a
+   notification doc. Clients may `read`, mark-read (`update` restricted via
+   `diff(...).affectedKeys().hasOnly(['read'])`), and `delete` their own — never `create`.
+
+### Using the *server's* id, not the FCM message id
+`AppNotification.id` now comes from `data["notificationId"]` — the Firestore doc id the function
+assigned — not `message.messageId` (a transient, FCM-internal id). This matters: mark-as-read and
+delete operate on Firestore doc ids, and the Firestore→Room sync listener will bring down a row with
+that exact id. If the client used a different id for its transient display than the id the function
+wrote to Firestore, the same logical notification would appear as two different rows once the sync
+listener caught up.
+
+### Routing the tap: reuse the nav graph's deep link resolution
+Added `deepLink: String?` to `AppNotification` → `NotificationDto` → `NotificationEntity` (Room
+migration v6→v7) and to `NotificationDisplayer.show(...)`. A reminder push carries
+`data["deepLink"] = "notey://note?noteId=..."`; a notification without one falls back to the generic
+inbox (`NotificationDeepLinks.uri(id)`). The in-app banner (`MainActivity`) now does
+`navController.navigate(uri)` against whichever URI applies — the **same** `navDeepLink` registrations
+already built for the system-tray tap in M3, rather than a separate hardcoded "always go to the inbox"
+path.
+
+### Known gap until M5 ships (accepted trade-off)
+Until the Cloud Function exists, **any push not sent by it — including a manual Firebase Console test
+push — will show a banner/system-tray alert but never appear in the inbox**, since nothing is left that
+can create the Firestore doc. Considered adding a client-side fallback `create` (only when the doc
+doesn't already exist) to preserve console-testing convenience, but rejected it: that reintroduces the
+dual-writer risk permanently for a temporary/testing-only need. The gap closes as soon as M5 ships next.
+
+### Cleanup
+Removed now-orphaned code rather than leaving it around "just in case": `NotificationRepository
+.saveNotification()`, `NotificationDao.upsertNotification()` (singular — only `upsertNotifications`,
+plural, still used), and the domain mapper `AppNotification.toEntity()`.
+
+### Verify
+- `compileDevDebugKotlin` / `assembleDevDebug` succeed.
+- (Runtime, once M5 exists) A reminder push shows the banner/heads-up and tapping it opens the
+  **note**, not the inbox; a generic push (if any) still opens the inbox as before.

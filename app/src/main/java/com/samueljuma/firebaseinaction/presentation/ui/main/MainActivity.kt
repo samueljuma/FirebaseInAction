@@ -15,10 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.samueljuma.firebaseinaction.core.navigation.AppNavHost
-import com.samueljuma.firebaseinaction.core.navigation.AppScreens
+import com.samueljuma.firebaseinaction.core.notifications.NotificationDeepLinks
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import com.samueljuma.firebaseinaction.presentation.designsystem.components.InAppNotificationBanner
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -57,9 +58,13 @@ class MainActivity : ComponentActivity() {
                                     notification = notification,
                                     onClick = {
                                         viewModel.onDismissNotification()
-                                        navController.navigate(
-                                            AppScreens.NotificationsScreen.createRoute(notification.id)
-                                        )
+                                        // Resolve against the nav graph's registered navDeepLinks —
+                                        // the same mechanism a tapped system notification uses.
+                                        // Reminders carry their own deepLink (opens the note);
+                                        // anything else falls back to the notifications inbox.
+                                        val uri = notification.deepLink
+                                            ?: NotificationDeepLinks.uri(notification.id)
+                                        navController.navigate(uri.toUri())
                                     },
                                     onDismiss = { viewModel.onDismissNotification() }
                                 )
