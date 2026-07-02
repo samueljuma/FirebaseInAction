@@ -18,9 +18,11 @@ google-services.json
 *.json
 !firebase.json
 !remote_config.json
+!firestore.indexes.json
 /release
 /.agents
 emulator-data/
 firebase-debug.log
 firestore-debug.log
+pubsub-debug.log
 firebase-export-*/

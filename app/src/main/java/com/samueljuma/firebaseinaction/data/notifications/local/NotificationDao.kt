@@ -15,9 +15,6 @@ interface NotificationDao {
     fun getUnreadCount(): Flow<Int>
 
     @Upsert
-    suspend fun upsertNotification(notification: NotificationEntity)
-
-    @Upsert
     suspend fun upsertNotifications(notifications: List<NotificationEntity>)
 
     @Query("UPDATE notifications SET read = 1 WHERE id = :id")

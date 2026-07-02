@@ -38,7 +38,27 @@
                     android:scheme="notey"
                     android:host="notification" />
             </intent-filter>
+
+            <!-- Note deep link (reminder pushes): notey://note?noteId=... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="notey"
+                    android:host="note" />
+            </intent-filter>
         </activity>
+
+        <!-- Channel FCM auto-displays into when a DISPLAY-kind message (e.g. a Console
+             campaign) arrives while backgrounded — our own code never runs for that case, so
+             without this FCM would use its own default "Miscellaneous" channel instead. Value
+             must stay in sync with NotificationChannels.GENERAL_CHANNEL_ID. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="general_notifications" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"

@@ -13,7 +13,8 @@ data class NotificationDto(
     val title: String = "",
     val body: String = "",
     val receivedAt: Long = 0L,
-    val read: Boolean = false
+    val read: Boolean = false,
+    val deepLink: String? = null
 )
 
 fun AppNotification.toDto() = NotificationDto(
@@ -21,7 +22,8 @@ fun AppNotification.toDto() = NotificationDto(
     title = title,
     body = body,
     receivedAt = receivedAt,
-    read = read
+    read = read,
+    deepLink = deepLink
 )
 
 fun NotificationDto.toEntity() = NotificationEntity(
@@ -29,5 +31,6 @@ fun NotificationDto.toEntity() = NotificationEntity(
     title = title,
     body = body,
     receivedAt = receivedAt,
-    read = read
+    read = read,
+    deepLink = deepLink
 )

@@ -80,7 +80,9 @@ class NoteRepositoryImpl(
                 content = note.content,
                 pinned = note.pinned,
                 updatedAt = System.currentTimeMillis(),
-                imageUrl = note.imageUrl
+                imageUrl = note.imageUrl,
+                reminderAt = note.reminderAt,
+                reminderFiredAt = note.reminderFiredAt
             )
             syncScheduler.scheduleNotesSync()
             Result.Success(Unit)

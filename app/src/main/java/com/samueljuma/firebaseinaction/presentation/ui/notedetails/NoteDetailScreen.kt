@@ -27,17 +27,24 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -52,10 +59,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
 import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
 import com.samueljuma.firebaseinaction.presentation.designsystem.components.NoteImageSection
+import com.samueljuma.firebaseinaction.presentation.designsystem.components.ReminderSection
+import com.samueljuma.firebaseinaction.presentation.designsystem.components.TimePickerDialog
 import com.samueljuma.firebaseinaction.presentation.ui.common.CancelUploadDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import timber.log.Timber
+import java.util.Calendar
+import java.util.TimeZone
 
 @Composable
 fun NoteDetailScreenRoot(
@@ -119,11 +130,88 @@ fun NoteDetailScreenRoot(
         )
     }
 
+    // Two-step reminder picker: date first, then time. Driven entirely by ViewModel state
+    // (not composable-local `remember`) so it survives activity recreation — e.g. rotating
+    // mid-pick doesn't silently dismiss the dialog. The UTC-midnight/local-time combination
+    // math lives in the ViewModel; this Composable only reports what the user picked.
+    if (state.showDatePicker) {
+        ReminderDatePickerDialog(
+            initialSelectedDateMillis = state.reminderAt ?: System.currentTimeMillis(),
+            onDateSelected = { viewModel.onAction(NoteDetailAction.OnReminderDateSelected(it)) },
+            onDismissRequest = { viewModel.onAction(NoteDetailAction.OnDatePickerDismissed) }
+        )
+    }
+
+    if (state.showTimePicker) {
+        val timePickerState = rememberTimePickerState()
+        TimePickerDialog(
+            onDismissRequest = { viewModel.onAction(NoteDetailAction.OnTimePickerDismissed) },
+            onConfirm = {
+                viewModel.onAction(
+                    NoteDetailAction.OnReminderTimeSelected(
+                        hour = timePickerState.hour,
+                        minute = timePickerState.minute
+                    )
+                )
+            }
+        ) {
+            TimePicker(state = timePickerState)
+        }
+    }
+
     NoteDetailScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onAction = viewModel::onAction
     )
+}
+
+@Composable
+private fun ReminderDatePickerDialog(
+    initialSelectedDateMillis: Long,
+    onDateSelected: (utcDateMillis: Long) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val todayUtcMidnight = remember {
+        Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialSelectedDateMillis,
+        selectableDates = object : SelectableDates by DatePickerDefaults.AllDates {
+            override fun isSelectableDate(utcTimeMillis: Long) =
+                utcTimeMillis >= todayUtcMidnight
+        }
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let(onDateSelected) ?: onDismissRequest()
+            }) { Text("Next") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) { Text("Cancel") }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ReminderDatePickerDialogPreview() {
+    AppTheme {
+        ReminderDatePickerDialog(
+            initialSelectedDateMillis = System.currentTimeMillis(),
+            onDateSelected = {},
+            onDismissRequest = {}
+        )
+    }
 }
 
 @Composable
@@ -265,6 +353,14 @@ private fun NoteDetailContent(
             uploadProgress = state.uploadProgress,
             onAddImageClicked = { onAction(NoteDetailAction.OnImageClicked) },
             onRemoveImageClicked = { onAction(NoteDetailAction.OnRemoveImageClicked) }
+        )
+
+        // ── Reminder ─────────────────────────────────────────
+        ReminderSection(
+            reminderAt = state.reminderAt,
+            isEditing = state.isEditing,
+            onSetReminderClicked = { onAction(NoteDetailAction.OnSetReminderClicked) },
+            onClearReminderClicked = { onAction(NoteDetailAction.OnClearReminderClicked) }
         )
 
         // ── Title ────────────────────────────────────────────

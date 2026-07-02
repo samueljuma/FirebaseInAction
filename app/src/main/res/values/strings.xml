@@ -23,4 +23,5 @@
     <string name="error_title_too_long">Title must be under 500 characters</string>
     <string name="error_content_too_long">Note content must be under 50,000 characters</string>
     <string name="note_limit_reached">You\'ve reached your limit of %1$d notes</string>
+    <string name="error_reminder_in_past">Pick a reminder time in the future</string>
 </resources>

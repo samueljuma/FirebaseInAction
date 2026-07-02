@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 interface NotificationRepository {
     fun getNotifications(): Flow<List<AppNotification>>
     fun getUnreadCount(): Flow<Int>
-    suspend fun saveNotification(notification: AppNotification): Result<Unit, DataError>
     suspend fun markAsRead(notificationId: String): Result<Unit, DataError>
     suspend fun deleteNotification(notificationId: String): Result<Unit, DataError>
     fun startRemoteSync(): Flow<Unit>

@@ -10,5 +10,6 @@ data class NotificationEntity(
     val title: String,
     val body: String,
     val receivedAt: Long,
-    val read: Boolean = false
+    val read: Boolean = false,
+    val deepLink: String? = null
 )
