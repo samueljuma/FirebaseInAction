@@ -1,3 +1,27 @@
 <resources>
-    <string name="app_name">FirebaseInAction</string>
+    <string name="app_name">Notey</string>
+    <string name="error_weak_password">Weak Password!</string>
+    <string name="error_invalid_credentials">Invalid Credentials!</string>
+    <string name="error_user_already_exists">User Already Exists!</string>
+    <string name="error_user_not_found">User Not Found!</string>
+    <string name="error_too_many_requests">Too many requests!</string>
+    <string name="error_network">Network Error!</string>
+    <string name="error_unknown">Oops! Something is wrong.</string>
+    <string name="error_email_not_verified">Email is not verified.</string>
+    <string name="error_invalid_email">Please enter your email</string>
+    <string name="error_invalid_password">Please enter your password</string>
+    <string name="error_no_google_account">No Google account found. Adding one now…</string>
+    <string name="error_google_sign_in_failed">Google Sign-In failed. Please try again.</string>
+    <string name="error_permission_denied">You don\'t have permission to do that</string>
+    <string name="error_not_found">The requested item was not found</string>
+    <string name="error_already_exists">This item already exists</string>
+    <string name="error_resource_exhausted">Service limit reached. Try again later</string>
+    <string name="error_disk_full">Device storage is full</string>
+    <string name="error_object_not_found">File not found</string>
+    <string name="error_file_too_large">File is too large to upload</string>
+    <string name="error_title_empty">Title is empty!</string>
+    <string name="error_title_too_long">Title must be under 500 characters</string>
+    <string name="error_content_too_long">Note content must be under 50,000 characters</string>
+    <string name="note_limit_reached">You\'ve reached your limit of %1$d notes</string>
+    <string name="error_reminder_in_past">Pick a reminder time in the future</string>
 </resources>

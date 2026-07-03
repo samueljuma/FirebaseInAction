@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Binding strip (left margin, slightly darker) -->
+    <path
+        android:pathData="M24,14 Q18,14 18,20 L18,88 Q18,94 24,94 L34,94 L34,14 Z"
+        android:fillColor="#D4CFFE"/>
+
+    <!-- Writing area (main page) -->
+    <path
+        android:pathData="M34,14 L84,14 Q90,14 90,20 L90,88 Q90,94 84,94 L34,94 Z"
+        android:fillColor="#EEEDFE"/>
+
+    <!-- Page outline (stroke only, drawn on top so border is crisp over both fills) -->
+    <path
+        android:pathData="M24,14 L84,14 Q90,14 90,20 L90,88 Q90,94 84,94 L24,94 Q18,94 18,88 L18,20 Q18,14 24,14 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="2"/>
+
+    <!-- Vertical divider between binding and writing area -->
+    <path
+        android:pathData="M34,14 L34,94"
+        android:strokeColor="#AFA9EC"
+        android:strokeWidth="1"/>
+
+    <!-- Binding ring 1 -->
+    <path
+        android:pathData="M20,34 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0"
+        android:fillColor="#D4CFFE"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="2"/>
+
+    <!-- Binding ring 2 -->
+    <path
+        android:pathData="M20,54 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0"
+        android:fillColor="#D4CFFE"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="2"/>
+
+    <!-- Binding ring 3 -->
+    <path
+        android:pathData="M20,74 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0"
+        android:fillColor="#D4CFFE"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="2"/>
+
+    <!-- Title line (bold, top of writing area) -->
+    <path
+        android:pathData="M42,28 L82,28"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"/>
+
+    <!-- Header divider (separates title from body content) -->
+    <path
+        android:pathData="M34,38 L90,38"
+        android:strokeColor="#AFA9EC"
+        android:strokeWidth="1"/>
+
+    <!-- Content line 1 -->
+    <path
+        android:pathData="M42,50 L82,50"
+        android:strokeColor="#7F77DD"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"/>
+
+    <!-- Content line 2 -->
+    <path
+        android:pathData="M42,62 L82,62"
+        android:strokeColor="#7F77DD"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"/>
+
+    <!-- Content line 3 -->
+    <path
+        android:pathData="M42,74 L82,74"
+        android:strokeColor="#7F77DD"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"/>
+
+    <!-- Content line 4 (shorter — simulates end of paragraph) -->
+    <path
+        android:pathData="M42,86 L60,86"
+        android:strokeColor="#7F77DD"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"/>
+
+</vector>

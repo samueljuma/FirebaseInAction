@@ -1,0 +1,40 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main, staging, dev]
+  pull_request:
+    branches: [main, staging, dev]
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Create local.properties (CI placeholders for signing config)
+        run: |
+          cat > local.properties <<EOF
+          KEYSTORE_PATH=dummy.jks
+          KEYSTORE_PASSWORD=dummy
+          KEY_ALIAS=dummy
+          KEY_PASSWORD=dummy
+          EOF
+
+      - name: Decode dev google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON_DEV }}" | base64 --decode > app/src/dev/google-services.json
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build, unit test, and lint (dev flavor)
+        run: ./gradlew assembleDevDebug testDevDebugUnitTest lintDevDebug --stacktrace
