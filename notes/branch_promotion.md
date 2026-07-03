@@ -26,6 +26,25 @@ branches sharing the same underlying SHAs, so each promotion PR contains only wh
 CI (`build` job) runs on PRs targeting all three branches, so every promotion gets checked. Pair
 with required-status-check rules on the protected branches.
 
+## If "Create a merge commit" is missing from the merge button
+
+Two independent switches can hide it (both hit during the first real promotion, 2026-07-03):
+
+1. **Repo setting** — Settings → General → *Pull Requests* → **"Allow merge commits"** must be
+   ticked. Unticked, the option vanishes from every PR in the repo.
+2. **"Require linear history"** on the *target* branch (ruleset or classic protection) — this rule
+   *forbids* merge commits, so GitHub hides the option even when the repo setting and the ruleset's
+   "allowed merge methods" both permit them. **Linear history is fundamentally incompatible with a
+   promotion workflow** — a promotion *is* a merge commit. Untick it for `staging`/`main`; `dev`
+   stays effectively linear anyway (squash-only features), and release-branch history reads as a
+   clean series of promotion merges.
+
+Check what's actually in force on a branch (the effective union of all rules):
+```bash
+gh api repos/<owner>/<repo>/rules/branches/staging --jq '.[].type'
+# look for: required_linear_history
+```
+
 ---
 
 ## Promoting a feature all the way to main
@@ -55,9 +74,10 @@ Merge with **Create a merge commit**. Optionally tag the release:
 git fetch && git tag -a v1.x.0 origin/main -m "v1.x.0" && git push origin v1.x.0
 ```
 
-> **First promotion note:** as of 2026-07-03, `staging` and `main` still sit at the initial commit —
-> the first `dev → staging` PR will carry all 14 accumulated commits. That's expected; the steps are
-> identical.
+> **First promotion (done 2026-07-03):** `staging` and `main` had sat at the initial commit since
+> project setup; PRs #16 (`dev → staging`) and #17 (`staging → main`) carried all 15 accumulated
+> commits through, both as merge commits. Verified afterwards: zero commits behind in the promotion
+> direction and identical trees on `dev` and `main`.
 
 ## Hotfix off main
 
