@@ -45,6 +45,28 @@ gh api repos/<owner>/<repo>/rules/branches/staging --jq '.[].type'
 # look for: required_linear_history
 ```
 
+## If merging is blocked: "This branch is out-of-date with the base branch"
+
+Hit on the *second* promotion (PR #19): checks green, but merging blocked with an offer to
+"merge the latest changes from staging into this branch."
+
+**Cause:** each promotion's merge commit lives only on the *target* branch — `dev` never gets it, so
+after the first promotion `dev` is permanently "1 commit behind" `staging` (ancestry-wise; content is
+identical). The ruleset option **"Require branches to be up to date before merging"** (the strict
+sub-option of required status checks) demands the head contain every commit of the base → every
+promotion after the first is blocked. Inherent collision between the merge-commit promotion model
+and strict up-to-date checking.
+
+**Fix options:**
+- **Untick "Require branches to be up to date before merging"** in the ruleset (what we did). For
+  promotion PRs the strictness adds zero information — the target only ever receives what the head
+  sent it — and CI also runs on *push* to all three branches, so post-merge breakage is still caught.
+  Refinement if wanted: two rulesets — strict on `dev` (guards racing feature PRs), non-strict on
+  `staging`/`main`.
+- Or click GitHub's **"Update branch"** button each time: back-merges the target into the head
+  (content-harmless, but pure ceremony — an identical tree gets re-tested, and the head's history
+  braids with a back-merge commit *every* promotion).
+
 ---
 
 ## Promoting a feature all the way to main
@@ -69,10 +91,8 @@ Merge with **Create a merge commit** (GUI: the dropdown on the merge button). Do
 ```bash
 gh pr create --base main --head staging --title "release: promote staging to main"
 ```
-Merge with **Create a merge commit**. Optionally tag the release:
-```bash
-git fetch && git tag -a v1.x.0 origin/main -m "v1.x.0" && git push origin v1.x.0
-```
+Merge with **Create a merge commit**. Then optionally tag/release — see
+[Tagging & releases](#tagging--releases) below.
 
 > **First promotion (done 2026-07-03):** `staging` and `main` had sat at the initial commit since
 > project setup; PRs #16 (`dev → staging`) and #17 (`staging → main`) carried all 15 accumulated
@@ -120,6 +140,38 @@ git checkout dev     && git merge --ff-only origin/dev
 git checkout staging && git merge --ff-only origin/staging
 git checkout main    && git merge --ff-only origin/main
 ```
+
+## Tagging & releases
+
+After `staging → main` merges, mark the released state. **No checkout needed either way** — a tag
+points at a *commit*, not a branch.
+
+### Path A — one command via `gh` (tag + GitHub Release together)
+```bash
+gh release create v1.x.0 --target main \
+  --title "v1.x.0" \
+  --notes "What shipped."
+```
+- Creates the tag server-side at `--target` if it doesn't exist. **Always pass `--target`
+  explicitly** — when omitted, a new tag lands on the repo's *default branch* tip, which on
+  dev-defaulted repos silently tags the wrong branch.
+- Your local clone won't see the tag until the next `git fetch`.
+- The tag is *lightweight*; the Release object carries the metadata (title, notes, date) instead.
+
+### Path B — plain git (annotated tag, no Release object)
+```bash
+git fetch origin                              # so origin/main points at the fresh merge
+git log --oneline -1 origin/main              # sanity: tagging the right commit?
+git tag -a v1.x.0 origin/main -m "v1.x.0"     # -a = annotated (tagger/date/message in git itself)
+git push origin v1.x.0                        # tags don't travel with git push
+```
+- `origin/main` after the tag name is the *target* — omit it and git tags **HEAD**, i.e. whatever
+  you have checked out (the classic way `dev` gets tagged by accident).
+- Use this path when the annotation should live in git history (`git show v1.x.0`) independent of
+  GitHub; wrap a Release around an existing tag later with `gh release create v1.x.0` if wanted.
+
+> **v1.0.0 (2026-07-03):** created via Path A, targeting `main` at the second promotion's merge
+> commit — the ten-Firebase-products state.
 
 ---
 
