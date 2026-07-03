@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Page body with dog-ear top-right corner -->
+    <path
+        android:pathData="M28,14L66,14L78,26L78,90Q78,96 72,96L28,96Q22,96 22,90L22,20Q22,14 28,14Z"
+        android:fillColor="#EEEDFE"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="2"/>
+
+    <!-- Dog-ear fold -->
+    <path
+        android:pathData="M66,14L78,26L66,26Z"
+        android:fillColor="#AFA9EC"
+        android:strokeColor="#534AB7"
+        android:strokeWidth="1.5"/>
+
+    <!-- 4-point sparkle — distinctive Notey mark -->
+    <path
+        android:pathData="M48,21L50,26L55,28L50,30L48,35L46,30L41,28L46,26Z"
+        android:fillColor="#534AB7"/>
+
+    <!-- Text lines -->
+    <path android:pathData="M30,48L68,48" android:strokeColor="#7F77DD" android:strokeWidth="2.5" android:strokeLineCap="round"/>
+    <path android:pathData="M30,60L68,60" android:strokeColor="#7F77DD" android:strokeWidth="2.5" android:strokeLineCap="round"/>
+    <path android:pathData="M30,72L68,72" android:strokeColor="#7F77DD" android:strokeWidth="2.5" android:strokeLineCap="round"/>
+    <path android:pathData="M30,84L52,84" android:strokeColor="#7F77DD" android:strokeWidth="2.5" android:strokeLineCap="round"/>
+
+</vector>

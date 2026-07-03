@@ -1,0 +1,539 @@
+# Firebase Cloud Functions — Per-Note Reminders
+
+Server-side code that runs on Google's infrastructure in response to events (Firestore writes, HTTP,
+schedules) or on a timer. We use it to build **per-note reminders**: a scheduled function scans notes
+for due reminders and sends a **data-only** FCM push that deep-links back to the note.
+
+Why Cloud Functions at all: the Firebase console can only send *notification* messages (which bypass
+`onMessageReceived` in the background). **Data-only** messages — which always hit `onMessageReceived`
+— can only be sent via the Admin SDK, i.e. from a server / Cloud Function.
+
+## Why a notes app even needs notifications
+A single-user notes app has no "user X did something, notify user Y" event, so generic pushes would be
+spam. The one notification that genuinely serves the user is a **reminder they set themselves**. That's
+the feature: user-requested, high value, never nagging.
+
+---
+
+## Milestone 0 — Scaffold
+
+Stood up a `functions/` codebase (no product logic yet) and wired it into the project.
+
+| Piece | Choice |
+|---|---|
+| Language | **Python** — no build step, and the rest of this project has nothing invested in Node/TS |
+| SDK | `firebase_functions` **v2** (2nd gen) + `firebase_admin` (`requirements.txt`) |
+| Runtime | **Python 3.12**, pinned explicitly (see gotcha below) |
+| Wiring | `functions` block in `firebase.json` + a `functions` emulator on `:5001` |
+
+### Why Python over the "default" TypeScript
+TypeScript is the Firebase docs' default, but that's a convention, not a requirement — 2nd-gen
+Functions is a first-class GA runtime in **both** languages, and everything this feature needs
+(`on_schedule`, Firestore collection-group queries, `messaging.send` with a data payload) exists in the
+Python SDK too. Since the rest of Notey is 100% Kotlin, there was no "keep one language" argument for
+TS specifically — Python's no-build-step simplicity won for a small scheduled job like this.
+
+### 1st vs 2nd gen
+We use **2nd-gen** functions: built on Cloud Run, better concurrency, and the `on_schedule` /
+`on_document_created` / `on_call` decorators with native Cloud Scheduler for cron. That's what the
+reminder scheduler (M5) needs.
+
+### The runtime-pin gotcha
+With no `runtime` set, the Firebase CLI silently picks `supported.latest("python")` — currently
+**python3.14** — and tries to run `python3.14` inside our venv, which only has 3.12:
+
+```
+Failed to find location of Firebase Functions SDK. Did you forget to run
+'. venv/bin/activate && python3.14 -m pip install -r requirements.txt'?
+```
+
+Fix: pin the runtime explicitly in `firebase.json`:
+```json
+"functions": [{ "source": "functions", "codebase": "default", "runtime": "python312" }]
+```
+**Lesson:** never rely on "latest" defaults for a deploy runtime — pin it, so an SDK release next
+month can't silently change what ships.
+
+### Local env
+A local `venv/` (Python 3.12) with `pip install -r requirements.txt`; `.gitignore` excludes
+`venv/`/`__pycache__/`. Unlike the abandoned TS attempt, **no gitignore rescue was needed** — the repo
+root's blanket `*.json` rule doesn't touch `requirements.txt` or `main.py`.
+
+### Blaze vs emulator
+Deploying functions needs the **Blaze** (pay-as-you-go) plan — but the **Functions emulator runs
+locally without billing**, so we build and test through M5 on the emulator and only enable Blaze at
+deploy (M6).
+
+### Verify
+- `pip install -r functions/requirements.txt` inside the venv succeeds.
+- `firebase emulators:exec --only functions "…"` → `✔ Loaded functions definitions from source`.
+
+---
+
+## Milestone 1 — Reminder fields, end to end
+
+Before any function exists, the note needs somewhere to carry a reminder. Two nullable fields, added
+consistently through every layer:
+
+| Field | Meaning |
+|---|---|
+| `reminderAt: Long?` | When the reminder is due (`null` = no reminder set) |
+| `reminderFiredAt: Long?` | `null` while pending; stamped once delivered — the guard against re-firing |
+
+### Every layer, one field name
+`Note` (domain) → `NoteEntity` (Room) → `NoteDto` (Firestore) → all 4 mapper functions in
+`NoteMappers.kt`. Keeping the field name identical across all four avoids a translation layer and
+keeps `toDto()`/`toEntity()` mechanical. Both default to `null`, so every existing call site
+(note creation, other mappers, tests) keeps compiling unchanged — additive, not breaking.
+
+### Extending the update path, not duplicating it
+`NoteDao.updateNoteFields()` already receives the whole edited `Note` via `updateNote()` in
+`NoteRepositoryImpl` — reminders are just two more columns in that same `UPDATE`. Adding a parallel
+"update reminder only" method would fork the write path for no reason (the whole note already flows
+through here on every edit).
+
+### Room migration — and the gotcha that would've broken it silently
+Bumped `AppDatabase` **v5 → v6** with `MIGRATION_5_6` (two `ALTER TABLE … ADD COLUMN` statements,
+nullable, `DEFAULT NULL` — the cheapest kind of Room migration, no table rebuild needed unlike the
+v3→v4 rename).
+
+**Gotcha:** defining a `Migration` object isn't enough — Room only applies migrations passed to
+`.addMigrations(...)` in `DatabaseModule.kt`. `MIGRATION_5_6` had to be added there explicitly; forgetting
+this step would compile fine and then crash (or silently mismatch) the first time a real device tries
+to open the upgraded database. **Lesson:** a new migration is two edits, not one — define it *and*
+register it.
+
+### Firestore round-trip
+No extra plumbing needed: `NoteEntity.toDto()` feeds `syncNotes()`'s `.set(entity.toDto())`, and
+`NoteDto.toEntity()` feeds the `startRemoteSync()` listener — both already pass every field through, so
+`reminderAt`/`reminderFiredAt` sync automatically once present on the DTO.
+
+### Verify
+- `compileDevDebugKotlin` succeeds.
+- Set a note's `reminderAt` locally → after a sync cycle, the field appears on the Firestore document
+  at `users/{uid}/notes/{id}`.
+
+---
+
+## Milestone 2 — Reminder UI (Material 3 date + time picker)
+
+Not a Cloud Functions milestone per se, but the client-side prerequisite: a way to actually set the
+`reminderAt` added in M1. Three gotchas worth remembering, all Android/Compose-general rather than
+Firebase-specific — but each would have shipped a real bug if missed.
+
+### Gotcha 1 — state must carry fields it doesn't render
+`NoteDetailViewModel.buildNoteFromState()` rebuilds a whole `Note` from `NoteDetailState` on *every*
+save — including saves triggered by unrelated actions (pin, image upload). If `reminderAt` weren't
+also stored in `NoteDetailState` (populated in `observeNote()`, read back in `buildNoteFromState()`),
+pinning a note would silently null out its reminder. **Lesson:** any domain field a "rebuild from
+state" pattern touches must live in state, even if nothing on screen displays it directly —
+`reminderFiredAt` is the same case: never rendered, but must round-trip or an unrelated edit un-does
+the "already delivered" guard from M1.
+
+### Gotcha 2 — editing a fired reminder must un-fire it
+`OnReminderDateTimeSelected` always resets `reminderFiredAt = null` when setting a *new* `reminderAt`.
+Without this, re-scheduling a reminder that already fired once would leave `reminderFiredAt` non-null
+forever — the M5 scheduled query filters on `reminderFiredAt == null`, so the new time would silently
+never fire.
+
+### Gotcha 3 — Material 3 has a `DatePickerDialog` but no `TimePickerDialog`
+`TimePicker` (the wheel/dial widget) ships with no dialog wrapper — unlike `DatePicker`. Added
+`TimePickerDialog.kt` in `presentation/designsystem/components/`: a plain `AlertDialog` with the
+`TimePicker` composable passed as `text` content, per Google's own documented recipe. Reusable
+wherever else the app needs a time picker.
+
+### Gotcha 4 — `DatePickerState.selectedDateMillis` is UTC midnight, not local
+The picked date comes back as **UTC midnight** of that calendar day — not midnight in the device's
+timezone. Naively seeding a local `Calendar` with that value and then overwriting hour/minute can land
+on the *wrong day* for any timezone behind UTC (UTC midnight Jan 15 is 4pm Jan 14 in US Pacific, for
+example). Fix: read `YEAR`/`MONTH`/`DAY_OF_MONTH` out of a **UTC** calendar, then build the real
+instant in a **local** calendar using those values plus the locally-picked hour/minute. A classic,
+easy-to-miss Compose date/time bug — worth remembering any time a `DatePicker` result feeds a
+timestamp.
+
+### Two-layer future-time validation
+- **UI**: `DatePickerState`'s `selectableDates` (a `SelectableDates` object delegating to
+  `DatePickerDefaults.AllDates`, overriding `isSelectableDate`) disables past *days* in the picker
+  itself.
+- **ViewModel**: `confirmReminderTime()` still rejects an exact timestamp ≤ now — needed because the
+  date picker only restricts by day; picking *today* with an already-passed time slips through the UI
+  layer and must be caught after combining date + time.
+
+### Gotcha 5 — picker flow state belongs in the ViewModel, not `remember`
+First pass put `showDatePicker`/`showTimePicker` in composable-local `remember { mutableStateOf(...) }`,
+reasoning (wrongly) that it was analogous to `LaunchImagePicker`'s `ActivityResultLauncher`. It isn't:
+the image picker launches an **external, OS-owned** UI whose own state isn't ours to keep. The date/time
+pickers are **in-app dialogs we fully control** — the same category as `showCancelUploadDialog`, which
+already lived in `NoteDetailState`. That was the precedent to follow.
+
+The concrete bug with `remember`: it does **not** survive activity recreation (e.g. device rotation) —
+only `rememberSaveable` does, and even that wouldn't help restore *which* Calendar values were mid-flow.
+`NoteDetailState` lives in the ViewModel, which **does** survive rotation (standard `ViewModel`
+lifecycle). So the original version: open the date picker, rotate — the dialog silently vanishes.
+
+Fixed by moving `showDatePicker`, `showTimePicker`, and `pickedReminderDateMillis` into
+`NoteDetailState`, and splitting the single `OnReminderDateTimeSelected` action into an explicit state
+machine: `OnSetReminderClicked` → `showDatePicker=true`; `OnReminderDateSelected` → stage the day,
+flip to `showTimePicker=true`; `OnReminderTimeSelected` → combine day + time (the UTC/local math from
+Gotcha 4), validate, commit `reminderAt`. `LaunchReminderPicker` (a one-shot `Event`) was removed
+entirely — since the dialog's visibility is now just a state field, the screen renders it directly
+(`if (state.showDatePicker) { ... }`), exactly like `showCancelUploadDialog`. Bonus: the UTC/local
+`Calendar` combination logic moved out of the Composable into the ViewModel, which is also the more
+correct home for it — that's business logic, not rendering, and it's now unit-testable without Compose.
+
+**Lesson:** when adding a new in-app dialog, look for the nearest existing dialog in the same
+ViewModel/screen and match its state ownership — don't reach for `remember` out of habit.
+
+### Verify
+- `compileDevDebugKotlin` succeeds.
+- Set a reminder for tomorrow → saved locally and synced to Firestore.
+- Try picking today + a past time → rejected with a snackbar.
+- Open the date picker, rotate the device → the dialog is still open (was the bug before Gotcha 5's fix).
+- Set a reminder, let it conceptually "fire" (`reminderFiredAt` set by M5 later), then re-schedule it
+  to a new time → `reminderFiredAt` resets to `null`.
+
+---
+
+## Milestone 3 — Note deep link
+
+A reminder push should open the *note*, not the generic notification inbox — so it needs its own
+scheme, mirroring the existing `NotificationDeepLinks` pattern exactly:
+
+| | Notification | Note (new) |
+|---|---|---|
+| Object | `core/notifications/NotificationDeepLinks.kt` | `core/notifications/NoteDeepLinks.kt` |
+| URI | `notey://notification?notificationId={id}` | `notey://note?noteId={id}` |
+| Registered | `navDeepLink` on `NotificationsScreen` + manifest `<intent-filter>` | same, on `NoteDetailScreen` |
+
+### Same three places, every deep link
+A deep link needs to be declared in **three** places that must agree: the `PATTERN` constant, the
+`navDeepLink { uriPattern = ... }` on the NavHost `composable(...)`, and the `<intent-filter>` in
+`AndroidManifest.xml` (`android:scheme`/`android:host`). Miss one and the link either 404s at the OS
+level (no intent-filter) or the tap opens the app to the wrong screen (registered in the manifest but
+not in the nav graph).
+
+### Guarding a deep-link-only entry point
+`NoteDetailScreen` is normally only reached through in-app navigation, where the user is already
+authenticated. A deep link can arrive **cold** (app killed, tapped from a notification), so it needs
+the same guard `NotificationsScreen` already has: check `isLoggedIn && isEmailVerified` and redirect to
+the right auth screen if not, instead of trying to render a note for no session.
+
+### Verify (done on a real emulator, not just compiled)
+```
+adb shell am start -a android.intent.action.VIEW -d "notey://note?noteId=test123" <applicationId>
+```
+`dumpsys package <id> | grep -A3 notey` confirmed both `notey://notification` and `notey://note`
+intent-filters are registered. Firing the intent launched `MainActivity` cleanly (`Status: ok`, no
+`FATAL EXCEPTION` in logcat) and landed directly on the **NoteDetail screen** (top bar showing "Note"
+with pin/delete/edit actions) — the auth guard passed because that emulator had an active session.
+With a nonexistent `noteId`, the screen correctly spins forever (`getNoteById` never emits past
+`filterNotNull()`) rather than crashing or showing wrong data — exactly the expected behavior for a
+bogus id.
+
+---
+
+## Milestone 4 — Client consumes server-authored data messages
+
+The architectural inversion this whole track has been building to: **the client stops writing
+notifications, the server starts.**
+
+### The old flow (client-authored)
+`onMessageReceived` built an `AppNotification` from any push's `data` and called
+`notificationRepository.saveNotification(...)`, which wrote to **both** Room and Firestore. This made
+sense when the client was the only thing that ever created inbox entries.
+
+### The new flow (server-authored)
+The Cloud Function (M5) will write the Firestore doc **first**, then send the push as a
+notification-only *signal*. The client's job is now only to **display** what arrives — the existing
+`StartNotificationSyncUseCase` listener (already running) picks up the server-written doc and syncs it
+into Room automatically. `AppFirebaseMessagingService.onMessageReceived` no longer touches
+`NotificationRepository` at all — the injection was removed along with the call.
+
+### Why not keep both writers "just in case"?
+Two things make dual-writing actively wrong, not just redundant:
+1. **Same-document race.** If the client also `.set()`s the doc the function just created, that's two
+   writers touching one document — the exact hazard server-authorship exists to remove.
+2. **`firestore.rules` now forbids it.** Tightened `/users/{uid}/notifications` to
+   `allow create: if false` — only the Admin SDK (which bypasses rules entirely) can create a
+   notification doc. Clients may `read`, mark-read (`update` restricted via
+   `diff(...).affectedKeys().hasOnly(['read'])`), and `delete` their own — never `create`.
+
+### Using the *server's* id, not the FCM message id
+`AppNotification.id` now comes from `data["notificationId"]` — the Firestore doc id the function
+assigned — not `message.messageId` (a transient, FCM-internal id). This matters: mark-as-read and
+delete operate on Firestore doc ids, and the Firestore→Room sync listener will bring down a row with
+that exact id. If the client used a different id for its transient display than the id the function
+wrote to Firestore, the same logical notification would appear as two different rows once the sync
+listener caught up.
+
+### Routing the tap: reuse the nav graph's deep link resolution
+Added `deepLink: String?` to `AppNotification` → `NotificationDto` → `NotificationEntity` (Room
+migration v6→v7) and to `NotificationDisplayer.show(...)`. A reminder push carries
+`data["deepLink"] = "notey://note?noteId=..."`; a notification without one falls back to the generic
+inbox (`NotificationDeepLinks.uri(id)`). The in-app banner (`MainActivity`) now does
+`navController.navigate(uri)` against whichever URI applies — the **same** `navDeepLink` registrations
+already built for the system-tray tap in M3, rather than a separate hardcoded "always go to the inbox"
+path.
+
+### Known gap until M5 ships (accepted trade-off)
+Until the Cloud Function exists, **any push not sent by it — including a manual Firebase Console test
+push — will show a banner/system-tray alert but never appear in the inbox**, since nothing is left that
+can create the Firestore doc. Considered adding a client-side fallback `create` (only when the doc
+doesn't already exist) to preserve console-testing convenience, but rejected it: that reintroduces the
+dual-writer risk permanently for a temporary/testing-only need. The gap closes as soon as M5 ships next.
+
+### Cleanup
+Removed now-orphaned code rather than leaving it around "just in case": `NotificationRepository
+.saveNotification()`, `NotificationDao.upsertNotification()` (singular — only `upsertNotifications`,
+plural, still used), and the domain mapper `AppNotification.toEntity()`.
+
+### Verify
+- `compileDevDebugKotlin` / `assembleDevDebug` succeed.
+- (Runtime, once M5 exists) A reminder push shows the banner/heads-up and tapping it opens the
+  **note**, not the inbox; a generic push (if any) still opens the inbox as before.
+
+---
+
+## Milestone 5 — The reminder producer (scheduled function)
+
+`functions/main.py`: `check_due_reminders`, a **scheduled** function (`@scheduler_fn.on_schedule`,
+`* * * * *` — every minute) that scans for due, unfired reminders across every user and delivers each
+through `deliver_notification(...)` — the reusable seam any future server-side producer would call.
+
+### The query: a collection-group scan
+```python
+db.collection_group("notes")
+    .where(filter=FieldFilter("reminderFiredAt", "==", None))
+    .where(filter=FieldFilter("reminderAt", "<=", now))
+    .stream()
+```
+`collection_group("notes")` searches every `notes` subcollection under every `users/{uid}` — a single
+query across all users, not one per user. Two filters on different fields (one equality, one
+inequality) on a **collection group** always needs an explicit composite index — added to
+`firestore.indexes.json` as `reminderFiredAt ASC, reminderAt ASC` (equality field first, by
+convention). The emulator doesn't enforce this (it auto-indexes everything for convenience); **production
+does** — this index must exist before `check_due_reminders` can query for real (M6).
+
+### Why mark fired *before* attempting delivery
+```python
+note_doc.reference.update({"reminderFiredAt": reminder_at})
+# ...then attempt delivery, catching failures
+```
+If delivery failed and we *hadn't* marked it fired yet, next minute's scan would pick the same note
+back up and retry forever. Marking fired first gives "attempt once" semantics: a bad token or transient
+send error is logged and the reminder is still considered handled, rather than spammed at every scan.
+
+### Idempotent doc ids, not auto-generated ones
+`notification_id = f"{note_id}_{reminder_at}"` — deterministic, not `db.collection(...).add(...)`'s
+random id. This is what makes a duplicate invocation harmless: writing to the *same* doc id twice is
+just an overwrite with identical data, not a second row in the inbox.
+
+### `deliver_notification()` as the shared seam
+Splits the query/scan loop from the actual "write the doc, send the push" work — the same pattern this
+whole track has been using client-side (`FeatureFlags`, `AppFirebaseMessagingService`): keep the
+*producer* (what decides to notify) separate from the *delivery* mechanics. A future producer (e.g. a
+scheduled inactivity check) would call the same `deliver_notification()` instead of duplicating the
+Firestore-write + FCM-send pairing.
+
+### Real emulator test (not just "it imports") — including a genuine at-least-once proof
+Ran `firebase emulators:start --only functions,firestore,pubsub` (scheduled/pubsub functions need the
+Pub/Sub emulator, added to `firebase.json`). Seeded a due-and-unfired note directly via the raw
+`google.cloud.firestore.Client` (the `FIRESTORE_EMULATOR_HOST` env var makes it bypass credentials —
+`firebase_admin.firestore.client()` insists on real Application Default Credentials even against the
+emulator, so it's the wrong tool for a throwaway seed script; the raw client is the standard workaround).
+Triggered the schedule manually via the emulator's HTTP endpoint:
+```
+curl -X POST http://localhost:5001/<project>/us-central1/check_due_reminders-0
+```
+(The emulator names the manually-triggerable HTTP wrapper `<function>-0`; it publishes to Pub/Sub,
+which the real `check_due_reminders` then consumes — hence two log entries per trigger.)
+
+**Result:** the manual trigger logged `processed 1 due reminder(s)` and, correctly, `No fcmToken for
+user testuser123 — inbox doc written, push skipped` (graceful handling of a user with no registered
+device). Pub/Sub then **redelivered the same message** on its own (realistic — Pub/Sub is
+at-least-once, never exactly-once) — a second, unprompted execution logged `processed 0 due
+reminder(s)`, because the first run had already stamped `reminderFiredAt`. Reading Firestore back
+afterward confirmed exactly **one** notification doc (`testnote1_<reminderAt>`, matching the idempotent
+id scheme) despite the two invocations, and `reminderFiredAt == reminderAt` on the note. This is the
+idempotency design working under a real duplicate-delivery scenario, not just a "run it twice
+manually" test.
+
+### Another `.gitignore` gap, same shape as `remote_config.json`
+`firestore.indexes.json` — now holding the composite index this milestone's query depends on in
+production — had **never** been tracked: caught by the same blanket `*.json` rule fixed for
+`remote_config.json`/`firebase.json` in M0. Added `!firestore.indexes.json`. Also ignored the new
+`pubsub-debug.log` the Pub/Sub emulator writes to the repo root.
+
+---
+
+## Milestone 6 — Deploy + real end-to-end (three real bugs found and fixed)
+
+The final milestone: `firebase deploy --only functions,firestore:indexes,firestore:rules` (Blaze was
+already enabled) got `check_due_reminders` live, then a genuine on-device test — set a reminder, wait
+for the push — surfaced three separate, real problems. None were hypothetical; each blocked the actual
+verification until fixed. Documenting the debugging path, not just the fixes, because the *reasoning*
+is the reusable part.
+
+### Bug 1 — `functions:log --only <name>` silently drops everything (CLI, not our code)
+Filtering the deploy's own logs by function name (`functions:log --only check_due_reminders`) returned
+only the two deployment audit-log lines, no matter how long we waited — looking exactly like "the
+scheduler never fires." Dropping `--only` and grepping the full, unfiltered log revealed the function
+had actually been running every minute the whole time. **Lesson:** when a log filter shows suspiciously
+*nothing*, suspect the filter before the system — pull unfiltered logs first.
+
+### Bug 2 — the real root cause: no Firestore rule for the parent `users/{userId}` doc
+Once real logs were visible, they were unambiguous: `No fcmToken for user <uid> — inbox doc written,
+push skipped`, on every single run the reminder was due. The Firestore write (inbox doc + Room sync)
+succeeded — that's what made it *look* like everything worked from the app's side — but the actual push
+was never attempted because the server found no token.
+
+Tracing why the token was missing led to `firestore.rules`: it only ever had rules for the
+**subcollections** `users/{userId}/notes/{noteId}` and `users/{userId}/notifications/{notificationId}`
+— never for the **parent** `users/{userId}` document itself, which is exactly what
+`PushTokenRepositoryImpl.saveTokenForCurrentUser()` writes `fcmToken` to. With no matching rule, that
+write fell through to the file's own deny-all catch-all (`match /{document=**} { allow read, write: if
+false; }`) and was silently rejected — confirmed directly in `adb logcat`:
+```
+Firestore: Write failed at users/<uid>: PERMISSION_DENIED
+```
+This wasn't introduced by this milestone track — it's as old as `PushTokenRepositoryImpl` itself, just
+never surfaced because nothing before now depended on that field actually being readable server-side.
+**Fixed** by adding an owner-scoped rule for the parent doc (matching the pattern already used
+elsewhere, deliberately *without* the `notes` block's email-verification gate — token capture happens
+right after signup, potentially before verification completes).
+```
+match /users/{userId} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+```
+**Lesson:** a Firestore security rule for a subcollection path grants nothing on its parent document —
+each `match` pattern is independent. A write to a path with no matching rule is denied by the catch-all,
+*silently* from the app's perspective (no crash — `firestoreSafeCall` just swallows it into a logged
+`Result.Error`) — this class of bug hides behind working-looking UI unless you check `adb logcat` or
+the Firebase Console's own request logs.
+
+### Bug 3 — the token is only ever captured at explicit sign-in (fix, not a bug in isolation, but what surfaced Bug 2)
+Even with rules fixed, the token still wouldn't be there for anyone who was *already* signed in via a
+persisted session — `saveTokenForCurrentUser()` is only called from `onNewToken()` (rare — new/rotated
+token only) and from inside `signUp()`/`signIn()`/`signInWithGoogle()` (only at that exact call). A
+persisted session (`SessionStorage` + Firebase Auth's own local persistence) means the app can restore
+a logged-in user on cold start **without ever calling those methods again** — so the token can go
+stale or missing indefinitely for a returning user, with no code path to notice or fix it.
+
+**Fixed** in `FirebaseInActionApp.onCreate()`, in the same block that already re-tags Crashlytics/
+Analytics for a returning user on startup — added a token resync there, on the existing
+`applicationScope`:
+```kotlin
+koin.get<AuthRepository>().getCurrentUserSync()?.let {
+    // ...existing Crashlytics/Analytics re-tag...
+    applicationScope.launch {
+        val pushTokenRepository = koin.get<PushTokenRepository>()
+        pushTokenRepository.getCurrentToken()?.let { token ->
+            pushTokenRepository.saveTokenForCurrentUser(token)
+        }
+    }
+}
+```
+**Lesson:** "capture the token at sign-in" is necessary but not sufficient — a persisted-login app also
+needs a "resync on every startup" path, or the token silently rots for exactly the users who never
+explicitly sign in again (i.e. almost everyone, most of the time).
+
+### Aside — verify the right build variant against the right backend
+Mid-debugging, a `devDebug` build (Firestore/Auth pointed at **local emulators** via
+`FirebaseEmulatorConfig`) got installed on the physical device that had actually been running
+`prodDebug` (the real, deployed backend) the whole time — an easy mistake once multiple devices/
+emulators and multiple flavors are in play. `dev` and `prod` have distinct `applicationId`s
+(`.dev` suffix vs none), so they install as separate apps rather than overwriting each other, which
+makes the mix-up easy to miss. Corrected by explicitly building/installing `assembleProdDebug` +
+`adb install` targeted at that specific device serial. **Lesson:** when a device's behavior doesn't
+match what the backend logs say, check which build variant — and therefore which backend — is actually
+running before assuming the backend is wrong.
+
+### Final verification — real reminder, real push, real device
+1. Deployed `functions,firestore:indexes,firestore:rules` to `fir-inaction-dev-e7b23` (`check_due_reminders`
+   confirmed `ACTIVE` via `firebase functions:list`); ran `functions:artifacts:setpolicy` to fix a
+   cleanup-policy warning (old container images would otherwise accumulate a small storage cost).
+2. Fixed the two real bugs above; redeployed just `firestore:rules`; relaunched `prodDebug` on the
+   physical device — confirmed via `adb logcat` that the earlier `PERMISSION_DENIED` was gone.
+3. Set a fresh reminder ~2 minutes out. The next scheduled run logged `processed 1 due reminder(s)`
+   with **no** "No fcmToken" warning — the send was actually attempted.
+4. **On-device: the in-app banner appeared, and tapping it opened the correct note** — the full chain
+   (reminder → scheduled scan → data-only push → `onMessageReceived` → banner → deep link → note) working
+   end to end, on a real device, for real.
+
+---
+
+## Addendum — handling FCM *notification* messages too (not a numbered milestone)
+
+The reminder track only ever sends **data-only** FCM messages. This addendum makes the client cope
+gracefully if a **notification** message ever arrives — e.g. a Firebase Console "Campaign," which is
+built entirely around the `notification` payload (title/body), not `data`.
+
+### The mechanic everything here is built on
+If `RemoteMessage.notification != null`, Android's FCM SDK **auto-displays it via the system tray and
+never calls `onMessageReceived()`** while the app is backgrounded/killed — an OS/SDK-level behavior, not
+overridable from app code. Data-only messages (what reminders send) always invoke `onMessageReceived()`,
+foreground or background — that's *why* reminders were built data-only in the first place (M4's
+motivation, way back at the start of this track).
+
+**Consequence, and why the change is small:** the background branch of `onMessageReceived`
+(`notificationDisplayer.show(...)`) is *structurally* only ever reached for data-only messages — a
+message with a `notification` block never gets there while backgrounded. So this addendum only needed
+to touch the **foreground** path and the **manifest** (for the background auto-display's channel) — not
+the background code at all.
+
+### `FcmPayloadKind { DATA, DISPLAY }` — transient, not persisted
+Added to `AppNotification`, derived once in `onMessageReceived` (`DISPLAY` when
+`message.notification != null`), used only to pick display/tap behavior. **Deliberately not added to
+the Room entity or Firestore DTO** — no migration. Persisted inbox rows are always `DATA` by
+construction: reminders are the only thing ever written to `/users/{uid}/notifications`, and only the
+Cloud Function (Admin SDK) can create that doc — `firestore.rules` has `allow create: if false` for the
+client specifically to prevent it authoring its own entries (the M4 redesign). A campaign has no
+server-side Firestore write at all, so there's nothing to persist for it, full stop — reopening `create`
+to let the client persist campaign taps would undo that fix for a use case (marketing/ad-hoc campaigns
+for a personal notes app) that doesn't obviously need durability anyway.
+
+### Content resolution: prefer `message.notification` for `DISPLAY`
+Before this, `onMessageReceived` only ever read `message.data` — a Console campaign with no custom data
+fields would show the generic fallback text ("Notey" / "This is a sample body...") instead of what was
+actually typed into the Console. Fixed by preferring `message.notification?.title`/`?.body`, falling
+back to `data[...]`, then the generic strings — `DATA`-kind messages are unaffected (they never set
+`message.notification` at all).
+
+### The tap-navigation bug found and avoided during design
+The obvious move — reuse the same `deepLink ?: NotificationDeepLinks.uri(id)` fallback the reminder
+banner already uses — turns out to be broken for a `DISPLAY` message. That fallback navigates to the
+notifications screen with the tapped id; `NotificationsViewModel` queues that id into `pendingReadIds`
+→ `markNotificationReadUseCase` → Firestore `.update("read", true)` on it when the screen closes.
+Firestore's `update()` requires the document to already exist — and a campaign's id was never
+persisted — so this would be a **guaranteed `NOT_FOUND` failure on every single campaign tap**
+(harmless, caught by `firestoreSafeCall`, but real, wasted, and pure noise). Caught by tracing the
+actual call chain rather than accepting "reuse the existing route" at face value.
+
+**Fix:** `DISPLAY`-kind taps dismiss and navigate to **Home** instead — a real destination (not a dead
+end — a plain "just dismiss, nothing happens" was considered and rejected: it's inconsistent with the
+backgrounded case, where tapping the OS-auto-displayed notification *does* open the app) that completely
+avoids the notifications route and its phantom mark-as-read.
+
+### One-line manifest fix for the background auto-display
+Without `com.google.firebase.messaging.default_notification_channel_id` set, a backgrounded `DISPLAY`
+message would auto-display in FCM's own default **"Miscellaneous"** channel — not our
+`general_notifications` channel — inconsistent branding and settings-grouping for the user. Added the
+meta-data (value must stay in sync with `NotificationChannels.GENERAL_CHANNEL_ID` — no shared source of
+truth between the manifest and the Kotlin constant, so this is a manual-sync point to remember).
+
+### A methodology note worth keeping
+A design-review pass (via a Plan-mode critique agent) correctly flagged that "just dismiss, do nothing"
+was a worse dead-end than *something* happening on tap, and proposed reusing the existing inbox
+fallback as the fix. That specific suggestion turned out to be buggy on closer inspection (the phantom
+`markAsRead` above) — a good reminder that a second opinion is valuable for catching blind spots, but
+its *specific* proposed fix still needs to be traced through the actual code before trusting it.
+
+### Verify
+- `compileDevDebugKotlin` / `assembleDevDebug` succeed; manifest merges clean.
+- Only two `AppNotification(...)` construction sites exist in the codebase (`AppFirebaseMessagingService.kt`
+  and `InAppNotificationBanner.kt`'s preview), both all-named-args — confirmed the new defaulted `kind`
+  field breaks neither.
+- (Runtime, when convenient) send a real Console test campaign: foreground shows the real title/body and
+  tapping lands on Home; backgrounded, the system notification appears in **General Notifications**, not
+  "Miscellaneous." Send a reminder afterward and confirm it's completely unaffected.

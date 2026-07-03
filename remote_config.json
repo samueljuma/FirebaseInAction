@@ -1,0 +1,27 @@
+{
+  "conditions": [],
+  "parameters": {
+    "enable_in_app_banner": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Master switch for the in-app FCM notification banner shown while the app is in the foreground.",
+      "valueType": "BOOLEAN"
+    },
+    "max_free_notes": {
+      "defaultValue": {
+        "value": "50"
+      },
+      "description": "Maximum number of notes a user may create before hitting the limit.",
+      "valueType": "NUMBER"
+    },
+    "welcome_message": {
+      "defaultValue": {
+        "value": "Welcome to Notey! We are elated to have you as on of our users"
+      },
+      "description": "Optional greeting shown on the Home screen top bar. Blank hides it.",
+      "valueType": "STRING"
+    }
+  },
+  "parameterGroups": {}
+}
