@@ -1,6 +1,6 @@
 package com.samueljuma.firebaseinaction.presentation.ui.notifications
 
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
+import com.samueljuma.core.domain.notifications.AppNotification
 
 /**
  * The tabs shown on the notifications screen. Owning the title, empty-state copy

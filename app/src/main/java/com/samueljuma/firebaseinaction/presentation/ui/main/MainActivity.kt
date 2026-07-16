@@ -21,9 +21,9 @@ import androidx.navigation.compose.rememberNavController
 import com.samueljuma.firebaseinaction.core.navigation.AppNavHost
 import com.samueljuma.firebaseinaction.core.navigation.AppScreens
 import com.samueljuma.firebaseinaction.core.notifications.NotificationDeepLinks
-import com.samueljuma.firebaseinaction.domain.notifications.model.FcmPayloadKind
-import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
-import com.samueljuma.firebaseinaction.presentation.designsystem.components.InAppNotificationBanner
+import com.samueljuma.core.domain.notifications.FcmPayloadKind
+import com.samueljuma.core.presentation.designsystem.AppTheme
+import com.samueljuma.core.presentation.ui.components.InAppNotificationBanner
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {

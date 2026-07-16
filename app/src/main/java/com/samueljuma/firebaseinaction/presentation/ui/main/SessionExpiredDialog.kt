@@ -21,8 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
-import com.samueljuma.firebaseinaction.presentation.designsystem.components.AppAlertDialog
+import com.samueljuma.core.presentation.designsystem.AppTheme
+import com.samueljuma.core.presentation.designsystem.components.AppAlertDialog
 
 @Composable
 fun SessionExpiredDialog(

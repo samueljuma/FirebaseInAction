@@ -24,6 +24,9 @@ workManager = "2.10.1"
 coil = "2.7.0"
 mixpanel = "7.5.3"
 material3 = "1.4.0"
+appcompat = "1.7.1"
+material = "1.14.0"
+jetbrainsKotlinJvm = "2.3.21"
 
 
 
@@ -104,7 +107,8 @@ androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-p
 
 # Material 3
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
-
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -113,6 +117,8 @@ google-services = { id = "com.google.gms.google-services", version = "4.4.4" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.7" }
 firebase-perf = { id = "com.google.firebase.firebase-perf", version = "2.0.2" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 
 [bundles]
 firebase = ["firebase-analytics", "firebase-auth", "firebase-firestore", "firebase-storage",

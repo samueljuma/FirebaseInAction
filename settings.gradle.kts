@@ -23,5 +23,11 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "FirebaseInAction"
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":app")
- 
+include(":core:presentation:designsystem")
+include(":core:presentation:ui")
+include(":core:domain")
+include(":feature:notes:presentation")
+include(":notes")

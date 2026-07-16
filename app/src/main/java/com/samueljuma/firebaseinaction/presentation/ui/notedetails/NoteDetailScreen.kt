@@ -57,10 +57,10 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
-import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
-import com.samueljuma.firebaseinaction.presentation.designsystem.components.NoteImageSection
-import com.samueljuma.firebaseinaction.presentation.designsystem.components.ReminderSection
-import com.samueljuma.firebaseinaction.presentation.designsystem.components.TimePickerDialog
+import com.samueljuma.core.presentation.designsystem.AppTheme
+import com.samueljuma.feature.notes.presentation.components.NoteImageSection
+import com.samueljuma.feature.notes.presentation.components.ReminderSection
+import com.samueljuma.core.presentation.designsystem.components.TimePickerDialog
 import com.samueljuma.firebaseinaction.presentation.ui.common.CancelUploadDialog
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel

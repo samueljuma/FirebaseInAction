@@ -1,7 +1,7 @@
 package com.samueljuma.firebaseinaction.data.notifications.remote
 
 import com.samueljuma.firebaseinaction.data.notifications.local.NotificationEntity
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
+import com.samueljuma.core.domain.notifications.AppNotification
 
 /**
  * Firestore wire model for a notification. Keeps the Firestore document schema

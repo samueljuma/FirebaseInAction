@@ -33,7 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
-import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
+import com.samueljuma.core.presentation.designsystem.AppTheme
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
