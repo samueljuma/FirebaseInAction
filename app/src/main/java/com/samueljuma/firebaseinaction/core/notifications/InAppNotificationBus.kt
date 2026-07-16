@@ -1,6 +1,6 @@
 package com.samueljuma.firebaseinaction.core.notifications
 
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
+import com.samueljuma.core.domain.notifications.AppNotification
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

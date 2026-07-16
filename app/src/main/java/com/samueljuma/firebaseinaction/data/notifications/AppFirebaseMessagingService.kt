@@ -6,8 +6,8 @@ import com.samueljuma.firebaseinaction.core.lifecycle.AppForegroundTracker
 import com.samueljuma.firebaseinaction.core.notifications.InAppNotificationBus
 import com.samueljuma.firebaseinaction.domain.notifications.NotificationDisplayer
 import com.samueljuma.firebaseinaction.domain.notifications.PushTokenRepository
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
-import com.samueljuma.firebaseinaction.domain.notifications.model.FcmPayloadKind
+import com.samueljuma.core.domain.notifications.AppNotification
+import com.samueljuma.core.domain.notifications.FcmPayloadKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

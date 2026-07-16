@@ -52,9 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.samueljuma.firebaseinaction.core.utils.ObserveAsEvents
-import com.samueljuma.firebaseinaction.core.utils.toFullTimestampString
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
-import com.samueljuma.firebaseinaction.presentation.designsystem.AppTheme
+import com.samueljuma.core.presentation.ui.utils.toFullTimestampString
+import com.samueljuma.core.domain.notifications.AppNotification
+import com.samueljuma.core.presentation.designsystem.AppTheme
 import org.koin.androidx.compose.koinViewModel
 import kotlin.time.Duration.Companion.days
 

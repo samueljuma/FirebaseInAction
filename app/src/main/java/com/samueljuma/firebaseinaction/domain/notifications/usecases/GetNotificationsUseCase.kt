@@ -1,7 +1,7 @@
 package com.samueljuma.firebaseinaction.domain.notifications.usecases
 
 import com.samueljuma.firebaseinaction.domain.notifications.NotificationRepository
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
+import com.samueljuma.core.domain.notifications.AppNotification
 import kotlinx.coroutines.flow.Flow
 
 class GetNotificationsUseCase(

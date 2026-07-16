@@ -12,7 +12,7 @@ import com.samueljuma.firebaseinaction.data.notifications.remote.toEntity as dto
 import com.samueljuma.firebaseinaction.domain.auth.SessionStorage
 import com.samueljuma.firebaseinaction.domain.notifications.NotificationRepository
 import com.samueljuma.firebaseinaction.domain.notifications.mapper.toDomain
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
+import com.samueljuma.core.domain.notifications.AppNotification
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

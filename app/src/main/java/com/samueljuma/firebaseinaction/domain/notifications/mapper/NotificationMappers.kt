@@ -1,7 +1,7 @@
 package com.samueljuma.firebaseinaction.domain.notifications.mapper
 
 import com.samueljuma.firebaseinaction.data.notifications.local.NotificationEntity
-import com.samueljuma.firebaseinaction.domain.notifications.model.AppNotification
+import com.samueljuma.core.domain.notifications.AppNotification
 
 fun NotificationEntity.toDomain() = AppNotification(
     id = id,
